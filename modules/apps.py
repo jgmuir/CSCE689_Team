@@ -1,7 +1,7 @@
 import lief
 import pandas as pd
 from flask import Flask, jsonify, request
-from modules.attribute_extractor import PEAttributeExtractor
+from attribute_extractor import PEAttributeExtractor
 
 
 def create_app(model, threshold):
