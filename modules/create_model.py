@@ -3,18 +3,19 @@ import os
 import pandas as pd
 import pefile
 import pickle
-# import seaborn as sns
-# from sklearn.ensemble import AdaBoostClassifier
-# from sklearn.ensemble import BaggingClassifier
-# from sklearn.ensemble import ExtraTreesClassifier
-# from sklearn.ensemble import GradientBoostingClassifier
+import seaborn as sns
+import matplotlib as plt
+from sklearn.ensemble import AdaBoostClassifier
+from sklearn.ensemble import BaggingClassifier
+from sklearn.ensemble import ExtraTreesClassifier
+from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.ensemble import RandomForestClassifier
-# from sklearn.feature_selection import SelectFromModel
-# from sklearn.metrics import confusion_matrix
-# from sklearn.metrics import classification_report
-from sklearn.metrics import train_test_split
-# from sklearn.neighbors import KNeighborsClassifier
-# from sklearn.tree import DecisionTreeClassifier
+from sklearn.feature_selection import SelectFromModel
+from sklearn.metrics import confusion_matrix
+from sklearn.metrics import classification_report
+from sklearn.model_selection import train_test_split
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.tree import DecisionTreeClassifier
 
 def create_model(model_file, sample_dir):
     model_file = "model.sav"
@@ -29,7 +30,7 @@ def create_model(model_file, sample_dir):
     # opcode_bi_gram_features = pd.DataFrame(columns=["SAMPLE"])
 
     # Creating the feature selector model
-    # selector = SelectFromModel(RandomForestClassifier(n_estimators=1000))
+    selector = SelectFromModel(RandomForestClassifier(n_estimators=1000))
 
     # Iterating through all samples in the samples subdirectory
     for root, dirs, files in os.walk(sample_dir):
@@ -131,47 +132,52 @@ def create_model(model_file, sample_dir):
     sample_df = pd.concat([feature_df, byte_bi_gram_features])
 
     # Training and testing each classifier with 5 folds
-    # models = [BaggingClassifier(KNeighborsClassifier()),
-    #           BaggingClassifier(DecisionTreeClassifier()),
-    #           BaggingClassifier(RandomForestClassifier(n_estimators=1000)),
-    #           BaggingClassifier(ExtraTreesClassifier(n_estimators=1000)),
-    #           BaggingClassifier(AdaBoostClassifier(n_estimators=1000)),
-    #           BaggingClassifier(GradientBoostingClassifier(n_estimators=1000)),
-    #           KNeighborsClassifier(),
-    #           DecisionTreeClassifier(),
-    #           RandomForestClassifier(n_estimators=1000),
-    #           ExtraTreesClassifier(n_estimators=1000),
-    #           AdaBoostClassifier(n_estimators=1000),
-    #           GradientBoostingClassifier(n_estimators=1000)]
+    models = [BaggingClassifier(KNeighborsClassifier()),
+              BaggingClassifier(DecisionTreeClassifier()),
+              BaggingClassifier(RandomForestClassifier(n_estimators=1000)),
+              BaggingClassifier(ExtraTreesClassifier(n_estimators=1000)),
+              BaggingClassifier(AdaBoostClassifier(n_estimators=1000)),
+              BaggingClassifier(GradientBoostingClassifier(n_estimators=1000)),
+              KNeighborsClassifier(),
+              DecisionTreeClassifier(),
+              RandomForestClassifier(n_estimators=1000),
+              ExtraTreesClassifier(n_estimators=1000),
+              AdaBoostClassifier(n_estimators=1000),
+              GradientBoostingClassifier(n_estimators=1000)]
     models = [RandomForestClassifier(n_estimators=1000)]
-    predictions = []
+    avg_acccuracies = []
     for model in models:
-        # model_predictions = []
-        # for i in range(5):
-        #     x_train, x_test, y_train, y_test = train_test_split(sample_df[:, 2:], sample_df[:, 1])
-        #     model.fit(x_train, y_train)
-        #     y_pred = model.predict(x_test)
-        #     model_predictions.append(y_pred)
-        #     print('Classification Report')
-        #     print(classification_report(y_test, y_pred))
-        #     print('Confusion Matrix')
-        #     confused = confusion_matrix(y_test, y_pred)
-        #     f = plt.figure(figsize=(15,15))
-        #     ax = f.add_subplot()
-        #     sns.heatmap(confused, annot=True, fmt='g', ax=ax)
-        #     ax.set_xlabel('Predicted Labels')
-        #     ax.set_ylabel('True Labels')
-        #     ax.set_title('Confusion Matrix')
-        #     ax.xaxis.set_ticklabels(["Malicious", "Benign"])
-        #     ax.yaxis.set_ticklabels(["Malicious", "Benign"])
-        #     plt.show()
-        #     print('True Negative: ' + str(confused[0][0]))
-        #     print('True Positive: ' + str(confused[1][1]))
-        #     print('False Negative: ' + str(confused[0][1]))
-        #     print('False Positive: ' + str(confused[1][0]))
-        x_train, x_test, y_train, y_test = train_test_split(sample_df[:, 2:], sample_df[:, 1])
-        model.fit(x_train, y_train)
-        pickle.dump(model, open(model_file, 'wb'))
+        model_predictions = []
+        model_accuracies = []
+        for i in range(5):
+            x_train, x_test, y_train, y_test = train_test_split(sample_df[:, 2:], sample_df[:, 1])
+            model.fit(x_train, y_train)
+            y_pred = model.predict(x_test)
+            model_predictions.append(y_pred)
+            print('Classification Report ' + str(i))
+            class_report = classification_report(y_test, y_pred)
+            model_accuracies.append(class_report['accuracy'])
+            print(class_report)
+            print('Confusion Matrix ' + str(i))
+            confused = confusion_matrix(y_test, y_pred)
+            f = plt.figure(figsize=(15,15))
+            ax = f.add_subplot()
+            sns.heatmap(confused, annot=True, fmt='g', ax=ax)
+            ax.set_xlabel('Predicted Labels')
+            ax.set_ylabel('True Labels')
+            ax.set_title('Confusion Matrix')
+            ax.xaxis.set_ticklabels(["Malicious", "Benign"])
+            ax.yaxis.set_ticklabels(["Malicious", "Benign"])
+            plt.show()
+            print('True Negative: ' + str(confused[0][0]))
+            print('True Positive: ' + str(confused[1][1]))
+            print('False Negative: ' + str(confused[0][1]))
+            print('False Positive: ' + str(confused[1][0]))
+        avg_acccuracies.append(sum(model_accuracies)/len(model_accuracies))  
 
-    #loaded_model = pickle.load(open(model_file, 'rb'))
+    # Selecting the top performing model as the one to use
+    best_model = models[index(max(avg_acccuracies))]
+    x_train, x_test, y_train, y_test = train_test_split(sample_df[:, 2:], sample_df[:, 1])
+    best_model.fit(x_train, y_train)
+    pickle.dump(best_model, open(model_file, 'wb'))
     
