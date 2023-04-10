@@ -1,0 +1,10 @@
+﻿  Source.cpp
+D:\School\Master\2023-SPRING\CSCE689\Final Project\Dropper\ntdll\Source.cpp(2115,21): warning C4018: '<': signed/unsigned mismatch
+D:\School\Master\2023-SPRING\CSCE689\Final Project\Dropper\ntdll\Source.cpp(2128,21): warning C4018: '<': signed/unsigned mismatch
+D:\School\Master\2023-SPRING\CSCE689\Final Project\Dropper\ntdll\Source.cpp(2145,21): warning C4018: '<': signed/unsigned mismatch
+     Creating library D:\School\Master\2023-SPRING\CSCE689\Final Project\Dropper\Release\ntdll.lib and object D:\School\Master\2023-SPRING\CSCE689\Final Project\Dropper\Release\ntdll.exp
+  Generating code
+  Previous IPDB not found, fall back to full compilation.
+  All 2098 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
+  Finished generating code
+  ntdll.vcxproj -> D:\School\Master\2023-SPRING\CSCE689\Final Project\Dropper\Release\ntdll.dll
