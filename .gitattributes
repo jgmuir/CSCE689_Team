@@ -1,2 +1,2 @@
-malware_full_list.csv filter=lfs diff=lfs merge=lfs -text
-ipynb_checkpoints/malware_full_list-checkpoint.csv filter=lfs diff=lfs merge=lfs -text
+resources/full_sha256.csv filter=lfs diff=lfs merge=lfs -text
+ipynb_checkpoints/full_sha256.csv filter=lfs diff=lfs merge=lfs -text

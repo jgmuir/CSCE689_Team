@@ -1,9 +1,0 @@
-﻿  Source.cpp
-D:\School\Master\2023-SPRING\CSCE689\Final Project\Dropper\calculator\Source.cpp(2256,22): warning C4018: '<': signed/unsigned mismatch
-     Creating library D:\School\Master\2023-SPRING\CSCE689\Final Project\Dropper\Release\calculator.lib and object D:\School\Master\2023-SPRING\CSCE689\Final Project\Dropper\Release\calculator.exp
-  Generating code
-  1 of 1989 functions (<0.1%) were compiled, the rest were copied from previous compilation.
-    0 functions were new in current compilation
-    0 functions had inline decision re-evaluated but remain unchanged
-  Finished generating code
-  calculator.vcxproj -> D:\School\Master\2023-SPRING\CSCE689\Final Project\Dropper\Release\calculator.exe
