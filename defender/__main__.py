@@ -1,11 +1,13 @@
 import os
 import pickle
 import envparse
-import _pickle as cPickle
-from app import create_app
+import pickle as cPickle
+from .app import create_app
+from gevent.pywsgi import WSGIServer
+import gzip
 
 # CUSTOMIZE: import model to be used
-from models.nfs_model import NeedForSpeedModel
+# from models.nfs_model import NeedForSpeedModel
 
 def load_gzip_pickle(filename):
     fp = gzip.open(filename,'rb')
@@ -26,18 +28,18 @@ if __name__ == "__main__":
         model_gz_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), model_gz_path)
 
     # CUSTOMIZE: app and model instance
-    model = load_gzip_pickle(model_gz_path)
-    # model = StatefulNNEmberModel(model_gz_path,
+    # model = load_gzip_pickle(model_gz_path)
+    # # model = StatefulNNEmberModel(model_gz_path,
     #                              model_thresh,
     #                              model_ball_thresh,
     #                              model_max_history,
     #                              model_name)
-
-    app = create_app(model, model_thresh)
+    print("Test")
+    app = create_app()
 
     import sys
     port = int(sys.argv[1]) if len(sys.argv) == 2 else 8080
 
-    from gevent.pywsgi import WSGIServer
-    http_server = WSGIServer(('', port), app)
+ 
+    http_server = WSGIServer(('127.0.0.1', port), app)
     http_server.serve_forever()
