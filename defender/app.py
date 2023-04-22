@@ -2,6 +2,7 @@ import lief
 import pandas as pd
 import random
 from flask import Flask, jsonify, request
+from classifier import create_feature_vector
 # from attribute_extractor import PEAttributeExtractor
 
 
@@ -13,39 +14,15 @@ def create_app():
     @app.route('/', methods=['POST'])
     def post():
         # curl -XPOST --data-binary @somePEfile http://127.0.0.1:8080/ -H "Content-Type: application/octet-stream"
-        # if request.headers['Content-Type'] != 'application/octet-stream':
-        #     resp = jsonify({'error': 'expecting application/octet-stream'})
-        #     resp.status_code = 400  # Bad Request
-        #     return resp
+        if 'file' not in request.files:
+            return "No file uploaded", 400
 
-        # bytez = request.data
+        file = request.files['file']
+        file_stream = io.BytesIO(file.read())
+        features = create_feature_vector(file_stream)
 
-        # try:
-        #     # initialize feature extractor with bytez
-        #     # pe_att_ext = PEAttributeExtractor(bytez)
-        #     # extract PE attributes
-        #     atts = pe_att_ext.extract()
-        #     # transform into a dataframe
-        #     atts = pd.DataFrame([atts])
-        #     model = app.config['model']
-
-        #     # query the model
-        #     result = model.predict_threshold(atts, threshold)[0]
-        #     print('LABEL = ', result)
-        # except (lief.bad_format, lief.read_out_of_bound) as e:
-        #     print("Error:", e)
-        #     result = 1
-
-
-        # if not isinstance(result, int) or result not in {0, 1}:
-        #     resp = jsonify({'error': 'unexpected model result (not in [0,1])'})
-        #     resp.status_code = 500  # Internal Server Error
-        #     return resp
-
-        # resp = jsonify({'result': result})
-        # resp.status_code = 200
-        # return resp
-        print("Hello World")
+        # Convert the DataFrame to JSON and return the result
+        return jsonify(features.to_dict(orient='records')[0])
 
     # get the model info
     @app.route('/model', methods=['GET'])

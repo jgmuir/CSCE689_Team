@@ -6,4 +6,4 @@ pefile
 seaborn
 gevent
 Flask
-lief
+liefimport shutil
