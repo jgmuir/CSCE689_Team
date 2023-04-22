@@ -40,7 +40,7 @@ def byte_array_to_string(byte_array):
 
 def create_feature_vectors(sample_dir):
     # Creating initial feature dataframe
-    feature_df = pd.DataFrame()
+    feature_df = pd.DataFrame() 
 
     # Creating structure to store all byte and ASM files
     byte_files = []
@@ -273,6 +273,78 @@ def create_feature_vectors(sample_dir):
     sample_df = feature_df
 
     return sample_df
+
+def create_feature_vector(file_obj):
+    # Creating initial feature dataframe
+    feature_df = pd.DataFrame()
+
+    # Collecting PE Header features from the input file
+    features = {}
+    try:
+        pe = pefile.PE(data=file_obj.read())
+
+        # DOS_HEADER features
+        features["e_cblp"] = pe.DOS_HEADER.e_cblp
+        features["e_cp"] = pe.DOS_HEADER.e_cp
+        features["e_cparhdr"] = pe.DOS_HEADER.e_cparhdr
+        features["e_maxalloc"] = pe.DOS_HEADER.e_maxalloc
+        features["e_sp"] = pe.DOS_HEADER.e_sp
+        features["e_lfanew"] = pe.DOS_HEADER.e_lfanew
+
+        # FILE_HEADER features
+        features["Machine"] = pe.FILE_HEADER.Machine
+        features["NumberOfSections"] = pe.FILE_HEADER.NumberOfSections
+        features["TimeDateStamp"] = pe.FILE_HEADER.TimeDateStamp
+        features["PointerToSymbolTable"] = pe.FILE_HEADER.PointerToSymbolTable
+        features["NumberOfSymbols"] = pe.FILE_HEADER.NumberOfSymbols
+        features["SizeOfOptionalHeader"] = pe.FILE_HEADER.SizeOfOptionalHeader
+        features["Characteristics"] = pe.FILE_HEADER.Characteristics
+
+        # OPTIONAL_HEADER features
+        features["Magic"] = pe.OPTIONAL_HEADER.Magic
+        features["MajorLinkerVersion"] = pe.OPTIONAL_HEADER.MajorLinkerVersion
+        features["MinorLinkerVersion"] = pe.OPTIONAL_HEADER.MinorLinkerVersion
+        features["SizeOfCode"] = pe.OPTIONAL_HEADER.SizeOfCode
+        features["SizeOfInitializedData"] = pe.OPTIONAL_HEADER.SizeOfInitializedData
+        features["SizeOfUninitializedData"] = pe.OPTIONAL_HEADER.SizeOfUninitializedData
+        features["AddressOfEntryPoint"] = pe.OPTIONAL_HEADER.AddressOfEntryPoint
+        features["BaseOfCode"] = pe.OPTIONAL_HEADER.BaseOfCode
+        features["BaseOfData"] = pe.OPTIONAL_HEADER.BaseOfData
+        features["ImageBase"] = pe.OPTIONAL_HEADER.ImageBase
+        features["SectionAlignment"] = pe.OPTIONAL_HEADER.SectionAlignment
+        features["FileAlignment"] = pe.OPTIONAL_HEADER.FileAlignment
+        features["MajorOperatingSystemVersion"] = pe.OPTIONAL_HEADER.MajorOperatingSystemVersion
+        features["MinorOperatingSystemVersion"] = pe.OPTIONAL_HEADER.MinorOperatingSystemVersion
+        features["MajorImageVersion"] = pe.OPTIONAL_HEADER.MajorImageVersion
+        features["MinorImageVersion"] = pe.OPTIONAL_HEADER.MinorImageVersion
+        features["MajorSubsystemVersion"] = pe.OPTIONAL_HEADER.MajorSubsystemVersion
+        features["MinorSubsystemVersion"] = pe.OPTIONAL_HEADER.MinorSubsystemVersion
+        features["SizeOfImage"] = pe.OPTIONAL_HEADER.SizeOfImage
+        features["SizeOfHeaders"] = pe.OPTIONAL_HEADER.SizeOfHeaders
+        features["CheckSum"] = pe.OPTIONAL_HEADER.CheckSum
+        features["Subsystem"] = pe.OPTIONAL_HEADER.Subsystem
+        features["DllCharacteristics"] = pe.OPTIONAL_HEADER.DllCharacteristics
+        features["SizeOfStackReserve"] = pe.OPTIONAL_HEADER.SizeOfStackReserve
+        features["SizeOfStackCommit"] = pe.OPTIONAL_HEADER.SizeOfStackCommit
+        features["SizeOfHeapReserve"] = pe.OPTIONAL_HEADER.SizeOfHeapReserve
+        features["SizeOfHeapCommit"] = pe.OPTIONAL_HEADER.SizeOfHeapCommit
+        features["LoaderFlags"] = pe.OPTIONAL_HEADER.LoaderFlags
+        features["NumberOfRvaAndSizes"] = pe.OPTIONAL_HEADER.NumberOfRvaAndSizes
+
+    # Collecting Section features
+        for section in pe.sections:
+            section_name = section.Name.decode(errors='ignore').rstrip('\x00')
+            if section_name:
+                features[section_name + "_SizeOfRawData"] = section.SizeOfRawData
+                features[section_name + "_Entropy"] = section.get_entropy()
+
+        # Adding the features to the dataframe
+        feature_df = feature_df.append(features, ignore_index=True)
+
+    except pefile.PEFormatError:
+        print("Error: Not a valid PE file")
+
+return feature_df
 
 def evaluate_model(model, x_test, y_test):
     y_pred = model.predict(x_test)
