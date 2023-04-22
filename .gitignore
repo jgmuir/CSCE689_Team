@@ -7,6 +7,8 @@ samples/adversarial-original/*
 samples/adversarial-encoded/*
 samples/adversarial-final/*
 defender/pe-machine-learning-dataset/*
+samples/*
+res/full_sha256.csv
 attacker/Dropper/calculator/resource.h
 attacker/Dropper/calculator/calculator.rc
 attacker/Dropper/calculator/calculator.aps
