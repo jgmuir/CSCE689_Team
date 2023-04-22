@@ -2,7 +2,7 @@ import lief
 import pandas as pd
 import random
 from flask import Flask, jsonify, request
-from classifier import create_feature_vector
+from .classifier import create_feature_vector
 # from attribute_extractor import PEAttributeExtractor
 
 

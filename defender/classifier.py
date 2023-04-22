@@ -283,68 +283,80 @@ def create_feature_vector(file_obj):
     try:
         pe = pefile.PE(data=file_obj.read())
 
-        # DOS_HEADER features
-        features["e_cblp"] = pe.DOS_HEADER.e_cblp
-        features["e_cp"] = pe.DOS_HEADER.e_cp
-        features["e_cparhdr"] = pe.DOS_HEADER.e_cparhdr
-        features["e_maxalloc"] = pe.DOS_HEADER.e_maxalloc
-        features["e_sp"] = pe.DOS_HEADER.e_sp
-        features["e_lfanew"] = pe.DOS_HEADER.e_lfanew
+        file_header = getattr(pe, "FILE_HEADER", None)
+        features["FILE_HEADER.MACHINE"] = file_header.Machine if file_header else 0
+        features["FILE_HEADER.SIZEOFOPTIONALHEADER"] = file_header.SizeOfOptionalHeader if file_header else 0
+        features["FILE_HEADER.CHARACTERISTICS"] = file_header.Characteristics if file_header else 0
 
-        # FILE_HEADER features
-        features["Machine"] = pe.FILE_HEADER.Machine
-        features["NumberOfSections"] = pe.FILE_HEADER.NumberOfSections
-        features["TimeDateStamp"] = pe.FILE_HEADER.TimeDateStamp
-        features["PointerToSymbolTable"] = pe.FILE_HEADER.PointerToSymbolTable
-        features["NumberOfSymbols"] = pe.FILE_HEADER.NumberOfSymbols
-        features["SizeOfOptionalHeader"] = pe.FILE_HEADER.SizeOfOptionalHeader
-        features["Characteristics"] = pe.FILE_HEADER.Characteristics
+        entropies = []
+        if (hasattr(pe, "OPTIONAL_HEADER")):
+            features["OPTIONAL_HEADER.IMAGEBASE"] = pe.OPTIONAL_HEADER.ImageBase
+            features["OPTIONAL_HEADER.MAJOROPERATINGSYSTEM"] = pe.OPTIONAL_HEADER.MajorOperatingSystemVersion
+            features["OPTIONAL_HEADER.MAJORSUBSYSTEMVERSION"] = pe.OPTIONAL_HEADER.MajorSubsystemVersion
+            features["OPTIONAL_HEADER.DLLCHARACTERISTICS"] = pe.OPTIONAL_HEADER.DllCharacteristics
+            features["OPTIONAL_HEADER.SUBSYSTEM"] = pe.OPTIONAL_HEADER.Subsystem
+            for section in pe.sections:
+                entropies.append(section.get_entropy())
+            for directory in pe.OPTIONAL_HEADER.DATA_DIRECTORY:
+                features["DATA_DIRECTORY."+str(directory.name)] = 1 if ((directory.VirtualAddress != 0) and (directory.Size != 0)) else 0
+            byte_files.append(pe.get_data(pe.OPTIONAL_HEADER.BaseOfCode, pe.OPTIONAL_HEADER.SizeOfCode))
+            # TODO: Get ASM file here
+        else:
+            features["OPTIONAL_HEADER.IMAGEBASE"] = 0
+            features["OPTIONAL_HEADER.MAJOROPERATINGSYSTEM"] = 0
+            features["OPTIONAL_HEADER.MAJORSUBSYSTEMVERSION"] = 0
+            features["OPTIONAL_HEADER.DLLCHARACTERISTICS"] = 0
+            features["OPTIONAL_HEADER.SUBSYSTEM"] = 0
+            entropies.append(0)
+        if len(entropies) != 0:
+            features["PE_SECTIONS.MAXENTROPY"] = max(entropies)
+            features["PE_SECTIONS.MINENTROPY"] = min(entropies)
+            features["PE_SECTIONS.MEANENTROPY"] = sum(entropies) / len(entropies)
+        else:
+            features["PE_SECTIONS.MAXENTROPY"] = 0
+            features["PE_SECTIONS.MINENTROPY"] = 0
+            features["PE_SECTIONS.MEANENTROPY"] = 0
+       
+        entropies = []
+        if (hasattr(pe, "DIRECTORY_ENTRY_RESOURCE")):
+            for resource_type in pe.DIRECTORY_ENTRY_RESOURCE.entries:
+                if resource_type.name is not None:
+                    name = str(resource_type.name)
+                else:
+                    name = str(pefile.RESOURCE_TYPE.get(resource_type.struct.Id))
 
-        # OPTIONAL_HEADER features
-        features["Magic"] = pe.OPTIONAL_HEADER.Magic
-        features["MajorLinkerVersion"] = pe.OPTIONAL_HEADER.MajorLinkerVersion
-        features["MinorLinkerVersion"] = pe.OPTIONAL_HEADER.MinorLinkerVersion
-        features["SizeOfCode"] = pe.OPTIONAL_HEADER.SizeOfCode
-        features["SizeOfInitializedData"] = pe.OPTIONAL_HEADER.SizeOfInitializedData
-        features["SizeOfUninitializedData"] = pe.OPTIONAL_HEADER.SizeOfUninitializedData
-        features["AddressOfEntryPoint"] = pe.OPTIONAL_HEADER.AddressOfEntryPoint
-        features["BaseOfCode"] = pe.OPTIONAL_HEADER.BaseOfCode
-        features["BaseOfData"] = pe.OPTIONAL_HEADER.BaseOfData
-        features["ImageBase"] = pe.OPTIONAL_HEADER.ImageBase
-        features["SectionAlignment"] = pe.OPTIONAL_HEADER.SectionAlignment
-        features["FileAlignment"] = pe.OPTIONAL_HEADER.FileAlignment
-        features["MajorOperatingSystemVersion"] = pe.OPTIONAL_HEADER.MajorOperatingSystemVersion
-        features["MinorOperatingSystemVersion"] = pe.OPTIONAL_HEADER.MinorOperatingSystemVersion
-        features["MajorImageVersion"] = pe.OPTIONAL_HEADER.MajorImageVersion
-        features["MinorImageVersion"] = pe.OPTIONAL_HEADER.MinorImageVersion
-        features["MajorSubsystemVersion"] = pe.OPTIONAL_HEADER.MajorSubsystemVersion
-        features["MinorSubsystemVersion"] = pe.OPTIONAL_HEADER.MinorSubsystemVersion
-        features["SizeOfImage"] = pe.OPTIONAL_HEADER.SizeOfImage
-        features["SizeOfHeaders"] = pe.OPTIONAL_HEADER.SizeOfHeaders
-        features["CheckSum"] = pe.OPTIONAL_HEADER.CheckSum
-        features["Subsystem"] = pe.OPTIONAL_HEADER.Subsystem
-        features["DllCharacteristics"] = pe.OPTIONAL_HEADER.DllCharacteristics
-        features["SizeOfStackReserve"] = pe.OPTIONAL_HEADER.SizeOfStackReserve
-        features["SizeOfStackCommit"] = pe.OPTIONAL_HEADER.SizeOfStackCommit
-        features["SizeOfHeapReserve"] = pe.OPTIONAL_HEADER.SizeOfHeapReserve
-        features["SizeOfHeapCommit"] = pe.OPTIONAL_HEADER.SizeOfHeapCommit
-        features["LoaderFlags"] = pe.OPTIONAL_HEADER.LoaderFlags
-        features["NumberOfRvaAndSizes"] = pe.OPTIONAL_HEADER.NumberOfRvaAndSizes
+                if name is None:
+                    name = str(resource_type.struct.Id)
 
-    # Collecting Section features
-        for section in pe.sections:
-            section_name = section.Name.decode(errors='ignore').rstrip('\x00')
-            if section_name:
-                features[section_name + "_SizeOfRawData"] = section.SizeOfRawData
-                features[section_name + "_Entropy"] = section.get_entropy()
-
+                if hasattr(resource_type, 'directory'):
+                    for resource_id in resource_type.directory.entries:
+                        if hasattr(resource_id, 'directory'):
+                            for resource_lang in resource_id.directory.entries:
+                                if hasattr(resource_lang, "data"):
+                                    data = pe.get_data(resource_lang.data.struct.OffsetToData, resource_lang.data.struct.Size)
+                                    entropies.append(entropy(data))
+                                else:
+                                    entropies.append(0)
+        else:
+            entropies.append(0)
+        if len(entropies) != 0:
+            features["RESOURCES.MAXENTROPY"] = max(entropies)
+            features["RESOURCES.MINENTROPY"] = min(entropies)
+        else:
+            features["RESOURCES.MAXENTROPY"] = 0
+            features["RESOURCES.MINENTROPY"] = 0
+        
+        if (hasattr(pe, "VS_VERSIONINFO")):
+            features["VS_VERSIONINFO.Length"] = pe.VS_VERSIONINFO[0].Length
+        else:
+            features["VS_VERSIONINFO.Length"] = 0
         # Adding the features to the dataframe
         feature_df = feature_df.append(features, ignore_index=True)
 
     except pefile.PEFormatError:
         print("Error: Not a valid PE file")
 
-return feature_df
+    return feature_df
 
 def evaluate_model(model, x_test, y_test):
     y_pred = model.predict(x_test)

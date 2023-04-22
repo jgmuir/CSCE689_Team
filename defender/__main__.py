@@ -39,7 +39,7 @@ if __name__ == "__main__":
 
     import sys
     port = int(sys.argv[1]) if len(sys.argv) == 2 else 8080
-
+    print(f'Starting server on http://127.0.0.1:{port}')
  
     http_server = WSGIServer(('127.0.0.1', port), app)
     http_server.serve_forever()
