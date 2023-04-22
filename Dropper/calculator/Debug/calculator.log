@@ -1,4 +1,0 @@
-﻿  Source.cpp
-D:\School\Master\2023-SPRING\CSCE689\Final Project\Dropper\calculator\Source.cpp(2256,22): warning C4018: '<': signed/unsigned mismatch
-D:\School\Master\2023-SPRING\CSCE689\Final Project\Dropper\calculator\Source.cpp(2199): warning C4715: 'rpe': not all control paths return a value
-  calculator.vcxproj -> D:\School\Master\2023-SPRING\CSCE689\Final Project\Dropper\Debug\calculator.exe

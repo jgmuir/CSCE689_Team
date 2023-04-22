@@ -1,2 +1,12 @@
 *.ipynb_checkpoints/
+*.vs/
+*Release/
+samples/malicious/*
+samples/benign/*
+samples/adversarial-original/*
+samples/adversarial-encoded/*
+samples/adversarial-final/*
 defender/pe-machine-learning-dataset/*
+attacker/Dropper/calculator/resource.h
+attacker/Dropper/calculator/calculator.rc
+attacker/Dropper/calculator/calculator.aps
