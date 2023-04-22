@@ -17,6 +17,11 @@ def create_app():
         if 'file' not in request.files:
             return "No file uploaded", 400
 
+        try:
+            lief.PE.parse(file_stream)
+        except lief.exception as e:
+            abort(400, "Invalid PE file")
+
         file = request.files['file']
         file_stream = io.BytesIO(file.read())
         features = create_feature_vector(file_stream)
