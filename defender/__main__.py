@@ -2,10 +2,10 @@ import os
 import pickle
 import envparse
 import _pickle as cPickle
-from defender.apps import create_app
+from app import create_app
 
 # CUSTOMIZE: import model to be used
-from defender.models.nfs_model import NeedForSpeedModel
+from models.nfs_model import NeedForSpeedModel
 
 def load_gzip_pickle(filename):
     fp = gzip.open(filename,'rb')
