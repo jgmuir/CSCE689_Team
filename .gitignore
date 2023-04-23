@@ -1,9 +1,0 @@
-*.ipynb_checkpoints/
-*.vs/
-*Release/
-samples/training/benign/*
-samples/training/malicious/*
-res/full_sha256.csv
-attacker/Dropper/calculator/resource.h
-attacker/Dropper/calculator/calculator.rc
-attacker/Dropper/calculator/calculator.aps
