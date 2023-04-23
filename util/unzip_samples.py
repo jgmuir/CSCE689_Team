@@ -3,6 +3,7 @@
 
 import os
 import sys
+import pefile
 import shutil
 import pyzipper
 
@@ -44,12 +45,20 @@ def main():
             for temp_file in os.listdir(temp_dir):
                 # If the file is a windows executable
                 if temp_file.endswith(".exe") or temp_file.endswith(".dll") or temp_file.endswith(".xll"):
-                    # Set the path to save the unzipped file
-                    output_path = os.path.join(output_dir, str("{0:0=4d}".format(idx)))
+                    # If the file is formatted properly
+                    try:
+                        # If this throws no errors the file is good
+                        pe = pefile.PE(os.path.join(temp_dir,temp_file))
+                        pe.close()
 
-                    # Move the unzipped file to the output directory
-                    shutil.copyfile(os.path.join(temp_dir, temp_file), output_path)
-                    idx += 1
+                        # Set the path to save the unzipped file
+                        output_path = os.path.join(output_dir, str("{0:0=4d}".format(idx)))
+
+                        # Move the unzipped file to the output directory
+                        shutil.copyfile(os.path.join(temp_dir, temp_file), output_path)
+                        idx += 1
+                    except:
+                        continue
             shutil.rmtree(temp_dir)
     return
 
