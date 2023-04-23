@@ -18,11 +18,9 @@ def main():
         for file in files:
             # Read the binary
             data = open(os.path.join(root,file),'rb').read()
-            print(data)
 
             # Encode using base64
             bdata = base64.b64encode(data)
-            print(bdata)
 
             # XOR the encoded data
             xdata = XOR(bytearray(bdata))
