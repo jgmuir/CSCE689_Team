@@ -111,7 +111,7 @@ def get_byte_file(pe):
     except:
         return bytearray()
     
-def get_training_byte_features(byte_files):
+def get_training_byte_features(byte_files, classifications):
     # Initialize the set of unique bi-gram byte features
     all_unique_bi_grams = set()
     each_file_bi_grams = []
@@ -145,9 +145,20 @@ def get_training_byte_features(byte_files):
         for col, bi_gram in enumerate(all_unique_bi_grams):
             if bi_gram in file_bi_grams:
                 byte_bi_gram_features_list[row][col] = 1
-    # Convert the bi-gram byte features into a dataframe object
-    print("Converting bi-gram byte features to DataFrame")
-    byte_bi_gram_features = pd.DataFrame(byte_bi_gram_features_list, columns=all_unique_bi_grams)
+    # Creating the feature selector model for top 200 features
+    selector = SelectFromModel(estimator=RandomForestClassifier(n_estimators=1000), max_features=200)
+    # Selecting top 200 bi-gram byte features
+    print("Selecting top 200 bi-gram byte features")
+    selector.fit(byte_bi_gram_features_list, list(classifications))
+    selections = selector.get_support()
+    # Copy the selected features to another matrix
+    print("Copying selected bi-gram byte features")
+    selected_byte_bi_gram_features_dict = {}
+    for i, bi_gram in enumerate(all_unique_bi_grams):
+        if selections[i] == True:
+            selected_byte_bi_gram_features_dict[bi_gram] = [row[i] for row in byte_bi_gram_features_list]
+    print("Converting selected bi-gram byte features to DataFrame")
+    byte_bi_gram_features = pd.DataFrame(selected_byte_bi_gram_features_dict)
     return byte_bi_gram_features
 
 def get_validation_byte_features(byte_files, selected_byte_features):
@@ -232,7 +243,7 @@ def get_asm_file(pe):
     asm_file = [line.strip().strip('>>').strip().split(' ')[1] for line in lines if line.strip().strip('>>').strip()]
     return asm_file
     
-def get_training_asm_features(asm_files):
+def get_training_asm_features(asm_files, classifications):
     # Initialize the set of unique bi-gram and tri-gram OPCODE features
     all_unique_bi_grams = set()
     all_unique_tri_grams = set()
@@ -288,12 +299,32 @@ def get_training_asm_features(asm_files):
         for col, tri_gram in enumerate(all_unique_tri_grams):
             if tri_gram in file_tri_grams:
                 opcode_tri_gram_features_list[row][col] = 1
-    # Convert the bi-gram OPCODE features into a dataframe object
-    print("Converting bi-gram OPCODE features to DataFrame")
-    opcode_bi_gram_features = pd.DataFrame(opcode_bi_gram_features_list, columns=all_unique_bi_grams)
-    # Convert the tri-gram OPCODE features into a dataframe object
-    print("Converting tri-gram OPCODE features to DataFrame")
-    opcode_tri_gram_features = pd.DataFrame(opcode_tri_gram_features_list, columns=all_unique_tri_grams)
+    # Creating the feature selector model for top 100 features
+    selector = SelectFromModel(estimator=RandomForestClassifier(n_estimators=1000), max_features=100)
+    # Selecting top 100 bi-gram opcode features
+    print("Selecting top 100 bi-gram OPCODE features")
+    selector.fit(opcode_bi_gram_features_list, list(classifications))
+    selections = selector.get_support()
+    # Copying the selected bi-gram features to another matrix
+    print("Copying selected bi-gram OPCODE features")
+    selected_opcode_bi_gram_features_dict = {}
+    for i, bi_gram in enumerate(all_unique_bi_grams):
+        if selections[i] == True:
+            selected_opcode_bi_gram_features_dict[bi_gram] = [row[i] for row in opcode_bi_gram_features_list]
+    print("Converting selected bi-gram byte features to DataFrame")
+    opcode_bi_gram_features = pd.DataFrame(selected_opcode_bi_gram_features_dict)
+    # Selecting top 100 tri-gram opcode features
+    print("Selecting top 100 tri-gram OPCODE features")
+    selector.fit(opcode_tri_gram_features_list, list(classifications))
+    selections = selector.get_support()
+    # Copy the selected features to another matrix
+    print("Copying selected tri-gram OPCODE features")
+    selected_opcode_tri_gram_features_dict = {}
+    for i, bi_gram in enumerate(all_unique_bi_grams):
+        if selections[i] == True:
+            selected_opcode_tri_gram_features_dict[bi_gram] = [row[i] for row in opcode_tri_gram_features_list]
+    print("Converting selected bi-gram byte features to DataFrame")
+    opcode_tri_gram_features = pd.DataFrame(selected_opcode_tri_gram_features_dict)
     return opcode_bi_gram_features, opcode_tri_gram_features
 
 def get_validation_asm_features(asm_files, selected_opcode_features_1, selected_opcode_features_2):
@@ -432,31 +463,15 @@ def create_training_feature_vectors(sample_dir):
             asm_files[sample] = get_asm_file(pe)
     # Creating byte-based feature matrix
     print("Creating byte-based feature matrix")
-    byte_bi_gram_features = get_training_byte_features(byte_files)
+    byte_bi_gram_features = get_training_byte_features(byte_files, list(header_feature_df["CLASSIFICATION"]))
     # Creating opcode-based feature matrix
     print("Creating opcode-based feature matrix")
-    opcode_bi_gram_features, opcode_tri_gram_features = get_training_asm_features(asm_files)
-    # Creating the feature selector model for top 200 features
-    selector = SelectFromModel(estimator=RandomForestClassifier(n_estimators=1000), max_features=200)
-    # Selecting top 200 bi-gram byte features
-    print("Selecting top 200 bi-gram byte features")
-    selector.fit(byte_bi_gram_features.to_numpy(), list(header_feature_df["CLASSIFICATION"]))
-    selected_byte_features = byte_bi_gram_features.columns[selector.get_support()]
-    # Recreating the feature selector model for top 100 features
-    selector = SelectFromModel(estimator=RandomForestClassifier(n_estimators=1000), max_features=100)
-    # Selecting top 100 bi-gram opcode features
-    print("Selecting top 100 bi-gram OPCODE features")
-    selector.fit(opcode_bi_gram_features.to_numpy(), list(header_feature_df["CLASSIFICATION"]))
-    selected_opcode_features_1 = opcode_bi_gram_features.columns[selector.get_support()]
-    # Selecting top 100 tri-gram opcode features
-    print("Selecting top 100 tri-gram OPCODE features")
-    selector.fit(opcode_tri_gram_features.to_numpy(), list(header_feature_df["CLASSIFICATION"]))
-    selected_opcode_features_2 = opcode_tri_gram_features.columns[selector.get_support()]
+    opcode_bi_gram_features, opcode_tri_gram_features = get_training_asm_features(asm_files, list(header_feature_df["CLASSIFICATION"]))
     # Creating final dataset with full feature matrix
-    final_feature_df = pd.concat([header_feature_df, byte_bi_gram_features.loc[:, selected_byte_features], opcode_bi_gram_features.loc[:, selected_opcode_features_1], opcode_tri_gram_features.loc[:, selected_opcode_features_2]])
+    final_feature_df = pd.concat([header_feature_df, byte_bi_gram_features, opcode_bi_gram_features, opcode_tri_gram_features])
     # Fill empty spaces in the dataframe with 0s
     final_feature_df = final_feature_df.fillna(0)
-    return final_feature_df, selected_byte_features, selected_opcode_features_1, selected_opcode_features_2
+    return final_feature_df, byte_bi_gram_features.columns, opcode_bi_gram_features.columns, opcode_tri_gram_features.columns
 
 def create_validation_feature_vectors(sample_dir, selected_byte_features, selected_opcode_features_1, selected_opcode_features_2):
     # Creating initial header feature dataframe
@@ -636,7 +651,7 @@ def main():
     # MODEL OUTPUT LOCATION
     model_file = "model.sav"
     # TRAINING SAMPLE LOCATION
-    train_dir = ".\samples\\temp"
+    train_dir = ".\samples\\training"
     # TESTING SAMPLE LOCATION
     test_dir = ".\samples\\validation"
     # CREATING THE TRAINING DATASET
