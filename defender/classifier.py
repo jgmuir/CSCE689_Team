@@ -154,9 +154,9 @@ def get_training_byte_features(byte_files, classifications):
     # Copy the selected features to another matrix
     print("Copying selected bi-gram byte features")
     selected_byte_bi_gram_features_dict = {}
-    for i, bi_gram in enumerate(all_unique_bi_grams):
-        if selections[i] == True:
-            selected_byte_bi_gram_features_dict[bi_gram] = [row[i] for row in byte_bi_gram_features_list]
+    selected_indicies = [i for i, e in enumerate(selections) if e == True]
+    for index in selected_indicies:
+        selected_byte_bi_gram_features_dict[list(all_unique_bi_grams)[index]] = [row[index] for row in byte_bi_gram_features_list]
     print("Converting selected bi-gram byte features to DataFrame")
     byte_bi_gram_features = pd.DataFrame(selected_byte_bi_gram_features_dict)
     return byte_bi_gram_features
@@ -308,9 +308,9 @@ def get_training_asm_features(asm_files, classifications):
     # Copying the selected bi-gram features to another matrix
     print("Copying selected bi-gram OPCODE features")
     selected_opcode_bi_gram_features_dict = {}
-    for i, bi_gram in enumerate(all_unique_bi_grams):
-        if selections[i] == True:
-            selected_opcode_bi_gram_features_dict[bi_gram] = [row[i] for row in opcode_bi_gram_features_list]
+    selected_indicies = [i for i, e in enumerate(selections) if e == True]
+    for index in selected_indicies:
+        selected_opcode_bi_gram_features_dict[list(all_unique_bi_grams)[index]] = [row[index] for row in opcode_bi_gram_features_list]
     print("Converting selected bi-gram byte features to DataFrame")
     opcode_bi_gram_features = pd.DataFrame(selected_opcode_bi_gram_features_dict)
     # Selecting top 100 tri-gram opcode features
@@ -320,9 +320,9 @@ def get_training_asm_features(asm_files, classifications):
     # Copy the selected features to another matrix
     print("Copying selected tri-gram OPCODE features")
     selected_opcode_tri_gram_features_dict = {}
-    for i, bi_gram in enumerate(all_unique_bi_grams):
-        if selections[i] == True:
-            selected_opcode_tri_gram_features_dict[bi_gram] = [row[i] for row in opcode_tri_gram_features_list]
+    selected_indicies = [i for i, e in enumerate(selections) if e == True]
+    for index in selected_indicies:
+        selected_opcode_tri_gram_features_dict[list(all_unique_tri_grams)[index]] = [row[index] for row in opcode_tri_gram_features_list]
     print("Converting selected bi-gram byte features to DataFrame")
     opcode_tri_gram_features = pd.DataFrame(selected_opcode_tri_gram_features_dict)
     return opcode_bi_gram_features, opcode_tri_gram_features
@@ -566,6 +566,8 @@ def evaluate_model(model, x_test, y_test):
 def main():
     # MODEL OUTPUT LOCATION
     model_file = "model.sav"
+    # SELECTED FEATURES OUTPUT LOCATION
+    feature_file = "selected_features.txt"
     # TRAINING SAMPLE LOCATION
     train_dir = ".\samples\\training"
     # TESTING SAMPLE LOCATION
@@ -591,7 +593,6 @@ def main():
     # SAVING THE TRAINED MODEL
     pickle.dump(model, open(model_file, 'wb'))
     # SAVING THE SELECTED FEATURES
-    feature_file = ".\defender\selected_features.txt"
     with open(feature_file, 'w') as f:
         f.write("BI-GRAM BYTE FEATURES\n")
         for feature in selected_byte_features:
