@@ -111,7 +111,7 @@ def get_byte_file(pe):
     except:
         return bytearray()
     
-def get_training_byte_features(byte_files):
+def get_training_byte_features(byte_files, classifications):
     # Initialize the set of unique bi-gram byte features
     all_unique_bi_grams = set()
     each_file_bi_grams = []
@@ -145,12 +145,22 @@ def get_training_byte_features(byte_files):
         for col, bi_gram in enumerate(all_unique_bi_grams):
             if bi_gram in file_bi_grams:
                 byte_bi_gram_features_list[row][col] = 1
-    # Convert the bi-gram byte features into a dataframe object
-    print("Converting bi-gram byte features to DataFrame")
-    byte_bi_gram_features = pd.DataFrame(byte_bi_gram_features_list, columns=all_unique_bi_grams)
+    # Creating the feature selector model for top 200 features
+    selector = SelectFromModel(estimator=RandomForestClassifier(n_estimators=1000), max_features=200)
+    # Selecting top 200 bi-gram byte features
+    print("Selecting top 200 bi-gram byte features")
+    selector.fit(byte_bi_gram_features_list, list(classifications))
+    selections = selector.get_support()
+    # Copy the selected features to another matrix
+    print("Copying selected bi-gram byte features")
+    selected_byte_bi_gram_features_dict = {}
+    for i, bi_gram in enumerate(all_unique_bi_grams):
+        if selections[i] == True:
+            selected_byte_bi_gram_features_dict[bi_gram] = [row[i] for row in byte_bi_gram_features_list]
+    print("Converting selected bi-gram byte features to DataFrame")
+    byte_bi_gram_features = pd.DataFrame(selected_byte_bi_gram_features_dict)
     return byte_bi_gram_features
 
-<<<<<<< HEAD
 def get_validation_byte_features(byte_files, selected_byte_features):
     # Initialize the set of unique bi-gram byte features
     each_file_bi_grams = []
@@ -185,11 +195,6 @@ def get_validation_byte_features(byte_files, selected_byte_features):
     print("Converting bi-gram byte features to DataFrame")
     byte_bi_gram_features = pd.DataFrame(byte_bi_gram_features_list, columns=selected_byte_features)
     return byte_bi_gram_features
-=======
-def create_feature_vectors(sample_dir):
-    # Creating initial feature dataframe
-    feature_df = pd.DataFrame() 
->>>>>>> 69067930f2ba6f9429b22626619c92f6066bf484
 
 def get_classification_byte_features(byte_file, selected_byte_features):
     # Identify new unique bi-grams in the byte file
@@ -238,7 +243,7 @@ def get_asm_file(pe):
     asm_file = [line.strip().strip('>>').strip().split(' ')[1] for line in lines if line.strip().strip('>>').strip()]
     return asm_file
     
-def get_training_asm_features(asm_files):
+def get_training_asm_features(asm_files, classifications):
     # Initialize the set of unique bi-gram and tri-gram OPCODE features
     all_unique_bi_grams = set()
     all_unique_tri_grams = set()
@@ -294,12 +299,32 @@ def get_training_asm_features(asm_files):
         for col, tri_gram in enumerate(all_unique_tri_grams):
             if tri_gram in file_tri_grams:
                 opcode_tri_gram_features_list[row][col] = 1
-    # Convert the bi-gram OPCODE features into a dataframe object
-    print("Converting bi-gram OPCODE features to DataFrame")
-    opcode_bi_gram_features = pd.DataFrame(opcode_bi_gram_features_list, columns=all_unique_bi_grams)
-    # Convert the tri-gram OPCODE features into a dataframe object
-    print("Converting tri-gram OPCODE features to DataFrame")
-    opcode_tri_gram_features = pd.DataFrame(opcode_tri_gram_features_list, columns=all_unique_tri_grams)
+    # Creating the feature selector model for top 100 features
+    selector = SelectFromModel(estimator=RandomForestClassifier(n_estimators=1000), max_features=100)
+    # Selecting top 100 bi-gram opcode features
+    print("Selecting top 100 bi-gram OPCODE features")
+    selector.fit(opcode_bi_gram_features_list, list(classifications))
+    selections = selector.get_support()
+    # Copying the selected bi-gram features to another matrix
+    print("Copying selected bi-gram OPCODE features")
+    selected_opcode_bi_gram_features_dict = {}
+    for i, bi_gram in enumerate(all_unique_bi_grams):
+        if selections[i] == True:
+            selected_opcode_bi_gram_features_dict[bi_gram] = [row[i] for row in opcode_bi_gram_features_list]
+    print("Converting selected bi-gram byte features to DataFrame")
+    opcode_bi_gram_features = pd.DataFrame(selected_opcode_bi_gram_features_dict)
+    # Selecting top 100 tri-gram opcode features
+    print("Selecting top 100 tri-gram OPCODE features")
+    selector.fit(opcode_tri_gram_features_list, list(classifications))
+    selections = selector.get_support()
+    # Copy the selected features to another matrix
+    print("Copying selected tri-gram OPCODE features")
+    selected_opcode_tri_gram_features_dict = {}
+    for i, bi_gram in enumerate(all_unique_bi_grams):
+        if selections[i] == True:
+            selected_opcode_tri_gram_features_dict[bi_gram] = [row[i] for row in opcode_tri_gram_features_list]
+    print("Converting selected bi-gram byte features to DataFrame")
+    opcode_tri_gram_features = pd.DataFrame(selected_opcode_tri_gram_features_dict)
     return opcode_bi_gram_features, opcode_tri_gram_features
 
 def get_validation_asm_features(asm_files, selected_opcode_features_1, selected_opcode_features_2):
@@ -438,31 +463,15 @@ def create_training_feature_vectors(sample_dir):
             asm_files[sample] = get_asm_file(pe)
     # Creating byte-based feature matrix
     print("Creating byte-based feature matrix")
-    byte_bi_gram_features = get_training_byte_features(byte_files)
+    byte_bi_gram_features = get_training_byte_features(byte_files, list(header_feature_df["CLASSIFICATION"]))
     # Creating opcode-based feature matrix
     print("Creating opcode-based feature matrix")
-    opcode_bi_gram_features, opcode_tri_gram_features = get_training_asm_features(asm_files)
-    # Creating the feature selector model for top 200 features
-    selector = SelectFromModel(estimator=RandomForestClassifier(n_estimators=1000), max_features=200)
-    # Selecting top 200 bi-gram byte features
-    print("Selecting top 200 bi-gram byte features")
-    selector.fit(byte_bi_gram_features.to_numpy(), list(header_feature_df["CLASSIFICATION"]))
-    selected_byte_features = byte_bi_gram_features.columns[selector.get_support()]
-    # Recreating the feature selector model for top 100 features
-    selector = SelectFromModel(estimator=RandomForestClassifier(n_estimators=1000), max_features=100)
-    # Selecting top 100 bi-gram opcode features
-    print("Selecting top 100 bi-gram OPCODE features")
-    selector.fit(opcode_bi_gram_features.to_numpy(), list(header_feature_df["CLASSIFICATION"]))
-    selected_opcode_features_1 = opcode_bi_gram_features.columns[selector.get_support()]
-    # Selecting top 100 tri-gram opcode features
-    print("Selecting top 100 tri-gram OPCODE features")
-    selector.fit(opcode_tri_gram_features.to_numpy(), list(header_feature_df["CLASSIFICATION"]))
-    selected_opcode_features_2 = opcode_tri_gram_features.columns[selector.get_support()]
+    opcode_bi_gram_features, opcode_tri_gram_features = get_training_asm_features(asm_files, list(header_feature_df["CLASSIFICATION"]))
     # Creating final dataset with full feature matrix
-    final_feature_df = pd.concat([header_feature_df, byte_bi_gram_features.loc[:, selected_byte_features], opcode_bi_gram_features.loc[:, selected_opcode_features_1], opcode_tri_gram_features.loc[:, selected_opcode_features_2]])
+    final_feature_df = pd.concat([header_feature_df, byte_bi_gram_features, opcode_bi_gram_features, opcode_tri_gram_features])
     # Fill empty spaces in the dataframe with 0s
     final_feature_df = final_feature_df.fillna(0)
-    return final_feature_df, selected_byte_features, selected_opcode_features_1, selected_opcode_features_2
+    return final_feature_df, byte_bi_gram_features.columns, opcode_bi_gram_features.columns, opcode_tri_gram_features.columns
 
 def create_validation_feature_vectors(sample_dir, selected_byte_features, selected_opcode_features_1, selected_opcode_features_2):
     # Creating initial header feature dataframe
@@ -533,78 +542,6 @@ def create_classification_feature_vector(sample, selected_byte_features, selecte
     features = features.fillna(0)
     return features
 
-def create_feature_vector(file_obj):
-    # Creating initial feature dataframe
-    feature_df = pd.DataFrame()
-
-    # Collecting PE Header features from the input file
-    features = {}
-    try:
-        pe = pefile.PE(data=file_obj.read())
-
-        # DOS_HEADER features
-        features["e_cblp"] = pe.DOS_HEADER.e_cblp
-        features["e_cp"] = pe.DOS_HEADER.e_cp
-        features["e_cparhdr"] = pe.DOS_HEADER.e_cparhdr
-        features["e_maxalloc"] = pe.DOS_HEADER.e_maxalloc
-        features["e_sp"] = pe.DOS_HEADER.e_sp
-        features["e_lfanew"] = pe.DOS_HEADER.e_lfanew
-
-        # FILE_HEADER features
-        features["Machine"] = pe.FILE_HEADER.Machine
-        features["NumberOfSections"] = pe.FILE_HEADER.NumberOfSections
-        features["TimeDateStamp"] = pe.FILE_HEADER.TimeDateStamp
-        features["PointerToSymbolTable"] = pe.FILE_HEADER.PointerToSymbolTable
-        features["NumberOfSymbols"] = pe.FILE_HEADER.NumberOfSymbols
-        features["SizeOfOptionalHeader"] = pe.FILE_HEADER.SizeOfOptionalHeader
-        features["Characteristics"] = pe.FILE_HEADER.Characteristics
-
-        # OPTIONAL_HEADER features
-        features["Magic"] = pe.OPTIONAL_HEADER.Magic
-        features["MajorLinkerVersion"] = pe.OPTIONAL_HEADER.MajorLinkerVersion
-        features["MinorLinkerVersion"] = pe.OPTIONAL_HEADER.MinorLinkerVersion
-        features["SizeOfCode"] = pe.OPTIONAL_HEADER.SizeOfCode
-        features["SizeOfInitializedData"] = pe.OPTIONAL_HEADER.SizeOfInitializedData
-        features["SizeOfUninitializedData"] = pe.OPTIONAL_HEADER.SizeOfUninitializedData
-        features["AddressOfEntryPoint"] = pe.OPTIONAL_HEADER.AddressOfEntryPoint
-        features["BaseOfCode"] = pe.OPTIONAL_HEADER.BaseOfCode
-        features["BaseOfData"] = pe.OPTIONAL_HEADER.BaseOfData
-        features["ImageBase"] = pe.OPTIONAL_HEADER.ImageBase
-        features["SectionAlignment"] = pe.OPTIONAL_HEADER.SectionAlignment
-        features["FileAlignment"] = pe.OPTIONAL_HEADER.FileAlignment
-        features["MajorOperatingSystemVersion"] = pe.OPTIONAL_HEADER.MajorOperatingSystemVersion
-        features["MinorOperatingSystemVersion"] = pe.OPTIONAL_HEADER.MinorOperatingSystemVersion
-        features["MajorImageVersion"] = pe.OPTIONAL_HEADER.MajorImageVersion
-        features["MinorImageVersion"] = pe.OPTIONAL_HEADER.MinorImageVersion
-        features["MajorSubsystemVersion"] = pe.OPTIONAL_HEADER.MajorSubsystemVersion
-        features["MinorSubsystemVersion"] = pe.OPTIONAL_HEADER.MinorSubsystemVersion
-        features["SizeOfImage"] = pe.OPTIONAL_HEADER.SizeOfImage
-        features["SizeOfHeaders"] = pe.OPTIONAL_HEADER.SizeOfHeaders
-        features["CheckSum"] = pe.OPTIONAL_HEADER.CheckSum
-        features["Subsystem"] = pe.OPTIONAL_HEADER.Subsystem
-        features["DllCharacteristics"] = pe.OPTIONAL_HEADER.DllCharacteristics
-        features["SizeOfStackReserve"] = pe.OPTIONAL_HEADER.SizeOfStackReserve
-        features["SizeOfStackCommit"] = pe.OPTIONAL_HEADER.SizeOfStackCommit
-        features["SizeOfHeapReserve"] = pe.OPTIONAL_HEADER.SizeOfHeapReserve
-        features["SizeOfHeapCommit"] = pe.OPTIONAL_HEADER.SizeOfHeapCommit
-        features["LoaderFlags"] = pe.OPTIONAL_HEADER.LoaderFlags
-        features["NumberOfRvaAndSizes"] = pe.OPTIONAL_HEADER.NumberOfRvaAndSizes
-
-    # Collecting Section features
-        for section in pe.sections:
-            section_name = section.Name.decode(errors='ignore').rstrip('\x00')
-            if section_name:
-                features[section_name + "_SizeOfRawData"] = section.SizeOfRawData
-                features[section_name + "_Entropy"] = section.get_entropy()
-
-        # Adding the features to the dataframe
-        feature_df = feature_df.append(features, ignore_index=True)
-
-    except pefile.PEFormatError:
-        print("Error: Not a valid PE file")
-
-return feature_df
-
 def evaluate_model(model, x_test, y_test):
     y_pred = model.predict(x_test)
     print('Classification Report')
@@ -630,7 +567,7 @@ def main():
     # MODEL OUTPUT LOCATION
     model_file = "model.sav"
     # TRAINING SAMPLE LOCATION
-    train_dir = ".\samples\\temp"
+    train_dir = ".\samples\\training"
     # TESTING SAMPLE LOCATION
     test_dir = ".\samples\\validation"
     # CREATING THE TRAINING DATASET
