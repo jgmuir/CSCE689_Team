@@ -150,7 +150,6 @@ def get_training_byte_features(byte_files):
     byte_bi_gram_features = pd.DataFrame(byte_bi_gram_features_list, columns=all_unique_bi_grams)
     return byte_bi_gram_features
 
-<<<<<<< HEAD
 def get_validation_byte_features(byte_files, selected_byte_features):
     # Initialize the set of unique bi-gram byte features
     each_file_bi_grams = []
@@ -185,11 +184,6 @@ def get_validation_byte_features(byte_files, selected_byte_features):
     print("Converting bi-gram byte features to DataFrame")
     byte_bi_gram_features = pd.DataFrame(byte_bi_gram_features_list, columns=selected_byte_features)
     return byte_bi_gram_features
-=======
-def create_feature_vectors(sample_dir):
-    # Creating initial feature dataframe
-    feature_df = pd.DataFrame() 
->>>>>>> 69067930f2ba6f9429b22626619c92f6066bf484
 
 def get_classification_byte_features(byte_file, selected_byte_features):
     # Identify new unique bi-grams in the byte file
