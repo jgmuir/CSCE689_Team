@@ -2,8 +2,9 @@ import io
 import pefile
 import pandas as pd
 import random
+import os
 from flask import Flask, jsonify, request, abort
-from .classifier import create_feature_vector
+from .classifier import create_classification_feature_vector
 # from attribute_extractor import PEAttributeExtractor
 
 
@@ -23,16 +24,16 @@ def create_app(model, model_thresh):
 
       
         bytez = request.data
-       
-        features = create_feature_vector(bytez)
+        selected_feature_path = selected_feature_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../selected_features.txt')
+        selected_feature_path = os.environ['SELECTED_FEATURES_PATH']
 
+        features = create_classification_feature_vector(bytez, selected_feature_path)
+    
         # load feature vector into a model and get the result
-        # result = app.config['model'].predict(features)
-        
-
-        # Convert the DataFrame to JSON and return the result
-        return jsonify(features.to_dict(orient='records')[0])
-
+        result = app.config['model'].predict(features)
+        resp = jsonify({'result': result[0]})
+        resp.status_code = 200
+        return resp
     # get the model info
     @app.route('/model', methods=['GET'])
     def get_model():

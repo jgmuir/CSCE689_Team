@@ -217,7 +217,7 @@ def get_classification_byte_features(byte_file, selected_byte_features):
         if bi_gram in list(unique_bi_grams):
             byte_bi_gram_features_list[col] = 1
     # Convert the bi-gram byte features into a dataframe object
-    byte_bi_gram_features = pd.DataFrame(byte_bi_gram_features_list, columns=selected_byte_features)
+    byte_bi_gram_features = pd.DataFrame([byte_bi_gram_features_list], columns=selected_byte_features)
     return byte_bi_gram_features
     
 def get_asm_file(pe):
@@ -418,9 +418,9 @@ def get_classification_asm_features(asm_file, selected_opcode_features_1, select
         if tri_gram in list(unique_tri_grams):
             opcode_tri_gram_features_list[col] = 1
     # Convert the bi-gram OPCODE features into a dataframe object
-    opcode_bi_gram_features = pd.DataFrame(opcode_bi_gram_features_list, columns=selected_opcode_features_1)
+    opcode_bi_gram_features = pd.DataFrame([opcode_bi_gram_features_list], columns=selected_opcode_features_1)
     # Convert the tri-gram OPCODE features into a dataframe object
-    opcode_tri_gram_features = pd.DataFrame(opcode_tri_gram_features_list, columns=selected_opcode_features_2)
+    opcode_tri_gram_features = pd.DataFrame([opcode_tri_gram_features_list], columns=selected_opcode_features_2)
     return opcode_bi_gram_features, opcode_tri_gram_features
 
 def create_training_feature_vectors(sample_dir):
@@ -523,10 +523,46 @@ def create_validation_feature_vectors(sample_dir, selected_byte_features, select
     final_feature_df = final_feature_df.fillna(0)
     return final_feature_df
 
-def create_classification_feature_vector(sample, selected_byte_features, selected_opcode_features_1, selected_opcode_features_2):
+   
+def parse_selected_features(file_path):
+    with open(file_path, 'r') as file:
+        lines = file.readlines()
+
+    bi_gram_byte_features = []
+    bi_gram_opcode_features = []
+    tri_gram_opcode_features = []
+
+    current_section = None
+
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+
+        if line == "BI-GRAM BYTE FEATURES":
+            current_section = "bi_gram_byte"
+        elif line == "BI-GRAM OPCODE FEATURES":
+            current_section = "bi_gram_opcode"
+        elif line == "TRI-GRAM OPCODE FEATURES":
+            current_section = "tri_gram_opcode"
+        else:
+            if current_section == "bi_gram_byte":
+                bi_gram_byte_features.append(line)
+            elif current_section == "bi_gram_opcode":
+                bi_gram_opcode_features.append(line)
+            elif current_section == "tri_gram_opcode":
+                tri_gram_opcode_features.append(line)
+
+    return bi_gram_byte_features, bi_gram_opcode_features, tri_gram_opcode_features
+
+
+
+def create_classification_feature_vector(pe, selected_feature_path):
+    selected_byte_features, selected_opcode_features_1, selected_opcode_features_2=parse_selected_features(selected_feature_path)
     # Process the sample as a PE file
-    pe = pefile.PE(sample)
+
     # Collecting PE header features from the sample
+    header_features= pd.DataFrame()
     header_features = get_header_features(pe, header_features)
     # Gathering byte file for the sample
     byte_file = get_byte_file(pe)
@@ -539,6 +575,7 @@ def create_classification_feature_vector(sample, selected_byte_features, selecte
     # Creating final feature vector
     features = pd.concat([header_features, byte_bi_gram_features, opcode_bi_gram_features, opcode_tri_gram_features])
     # Fill empty spaces in the dataframe with 0s
+    print(features.shape)
     features = features.fillna(0)
     return features
 
