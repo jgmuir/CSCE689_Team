@@ -138,7 +138,7 @@ def get_training_byte_features(byte_files, classifications):
     # Initialize the bi-gram byte feature matrix
     num_rows = len(byte_files)
     num_cols = len(list(all_unique_bi_grams))
-    byte_bi_gram_features_list = [[0]*num_cols for i in range(num_rows)]              
+    byte_bi_gram_features_list = [[0]*num_cols for i in range(num_rows)]          
     # One-hot-encoding every sample with the combination of all encountered features
     for row, file_bi_grams in enumerate(each_file_bi_grams):
         print("One-hot-encoding bi-gram byte features for sample " + str(list(byte_files)[row]))
@@ -149,6 +149,7 @@ def get_training_byte_features(byte_files, classifications):
     selector = SelectFromModel(estimator=RandomForestClassifier(n_estimators=1000), max_features=200)
     # Selecting top 200 bi-gram byte features
     print("Selecting top 200 bi-gram byte features")
+    print(byte_bi_gram_features_list)
     selector.fit(byte_bi_gram_features_list, list(classifications))
     selections = selector.get_support()
     # Copy the selected features to another matrix
@@ -552,15 +553,13 @@ def parse_selected_features(file_path):
                 bi_gram_opcode_features.append(line)
             elif current_section == "tri_gram_opcode":
                 tri_gram_opcode_features.append(line)
-
+    print(len(bi_gram_byte_features), len(bi_gram_opcode_features), len(tri_gram_opcode_features))
     return bi_gram_byte_features, bi_gram_opcode_features, tri_gram_opcode_features
 
 
 
 def create_classification_feature_vector(pe, selected_feature_path):
     selected_byte_features, selected_opcode_features_1, selected_opcode_features_2=parse_selected_features(selected_feature_path)
-    # Process the sample as a PE file
-
     # Collecting PE header features from the sample
     header_features= pd.DataFrame()
     header_features = get_header_features(pe, header_features)
