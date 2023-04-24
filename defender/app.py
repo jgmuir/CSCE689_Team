@@ -24,8 +24,12 @@ def create_app(model, model_thresh):
 
       
         bytez = request.data
+        
         selected_feature_path = selected_feature_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../selected_features.txt')
-        selected_feature_path = os.environ['SELECTED_FEATURES_PATH']
+        if(os.environ['SELECTED_FEATURES_PATH']):
+            selected_feature_path = os.environ['SELECTED_FEATURES_PATH']
+        else:
+            selected_feature_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../selected_features.txt')
 
         features = create_classification_feature_vector(bytez, selected_feature_path)
     

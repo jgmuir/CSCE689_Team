@@ -573,7 +573,7 @@ def create_classification_feature_vector(pe, selected_feature_path):
     # Creating opcode-based features
     opcode_bi_gram_features, opcode_tri_gram_features = get_classification_asm_features(asm_file, selected_opcode_features_1, selected_opcode_features_2)
     # Creating final feature vector
-    features = pd.concat([header_features, byte_bi_gram_features, opcode_bi_gram_features, opcode_tri_gram_features])
+    features = pd.concat([header_features, byte_bi_gram_features, opcode_bi_gram_features, opcode_tri_gram_features],ignore_index=True)
     # Fill empty spaces in the dataframe with 0s
     print(features.shape)
     features = features.fillna(0)
