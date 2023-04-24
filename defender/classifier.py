@@ -557,6 +557,7 @@ def create_feature_vector(file_obj):
         features["FILE_HEADER.CHARACTERISTICS"] = file_header.Characteristics if file_header else 0
 
         entropies = []
+        byte_files = []
         if (hasattr(pe, "OPTIONAL_HEADER")):
             features["OPTIONAL_HEADER.IMAGEBASE"] = pe.OPTIONAL_HEADER.ImageBase
             features["OPTIONAL_HEADER.MAJOROPERATINGSYSTEM"] = pe.OPTIONAL_HEADER.MajorOperatingSystemVersion
