@@ -1,19 +1,38 @@
-import pickle
-import pefile
-from defender.classifier import create_validation_feature_vectors,create_training_feature_vectors
+import os
+import requests
+import numpy as np
 
-# Load the saved model
-with open('model.sav', 'rb') as f:
-    model = pickle.load(f)
+def process_files(path):
+    confusion_matrix = np.zeros((2, 2), dtype=int)
 
+    for root, _, files in os.walk(path):
+        for file in files:
+                filepath = os.path.join(root, file)
 
-    train, selected_byte_features, selected_opcode_features_1, selected_opcode_features_2 = create_training_feature_vectors("defender/pe-machine-learning-dataset")
-    test = create_validation_feature_vectors('defender/pe-machine-learning-dataset', selected_byte_features, selected_opcode_features_1, selected_opcode_features_2)
-    x_test = test.loc[:, test.columns != "CLASSIFICATION"]
-    x_test = x_test.drop(columns=["SAMPLE"])
-    # Make a prediction using the loaded model
-    prediction = model.predict(x_test)
+                with open(filepath, 'rb') as f:
+                    data = f.read()
+                
+                response = requests.post(
+                    "http://127.0.0.1:8080/",
+                    data=data,
+                    headers={"Content-Type": "application/octet-stream"}
+                )
+                
+                result = int(response.json()['result'])
+                true_label = 'gw' in root
+                
+                if true_label and result == 0:
+                    confusion_matrix[0, 0] += 1
+                elif true_label and result == 1:
+                    confusion_matrix[0, 1] += 1
+                elif not true_label and result == 0:
+                    confusion_matrix[1, 0] += 1
+                elif not true_label and result == 1:
+                    confusion_matrix[1, 1] += 1
 
-    # Print the prediction
-    print(prediction)
-    print(len(prediction))
+    return confusion_matrix
+
+if __name__ == '__main__':
+    base_path = "defender/pe-machine-learning-dataset"
+    confusion_matrix = process_files(base_path)
+    print(confusion_matrix)

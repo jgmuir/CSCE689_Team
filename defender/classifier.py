@@ -638,6 +638,8 @@ def main():
     x_test = test.loc[:, test.columns != "CLASSIFICATION"]
     x_test = x_test.drop(columns=["SAMPLE"])
     y_test = test["CLASSIFICATION"]
+    train.to_csv("training_vectors.csv", index=False)
+    test.to_csv("validation_vectors.csv", index=False)
     # EVALUATING THE RFC CLASSIFIER
     print("Evaluating the model")
     evaluate_model(model, x_test, y_test)
