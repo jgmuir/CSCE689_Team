@@ -1,7 +1,7 @@
 import requests
 
 try:
-    response = requests.get('http://127.0.0.1:8080/random', timeout=5)
+    response = requests.get('http://127.0.0.1:8080/', timeout=5)
     print(response.content)
 except requests.exceptions.Timeout:
     print('Timeout error occurred.')

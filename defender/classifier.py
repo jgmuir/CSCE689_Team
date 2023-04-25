@@ -210,14 +210,11 @@ def get_classification_byte_features(byte_file, selected_byte_features):
         # Moving the sliding window
         prev_byte = byte
     # Initialize the bi-gram byte feature matrix
-    num_cols = len(selected_byte_features)
-    byte_bi_gram_features_list = [0]*num_cols            
+    byte_bi_gram_features = dict.fromkeys(selected_byte_features, 0)          
     # One-hot-encoding the sample with the combination of all encountered features
-    for col, bi_gram in enumerate(selected_byte_features):
+    for bi_gram in selected_byte_features:
         if bi_gram in list(unique_bi_grams):
-            byte_bi_gram_features_list[col] = 1
-    # Convert the bi-gram byte features into a dataframe object
-    byte_bi_gram_features = pd.DataFrame(byte_bi_gram_features_list, columns=selected_byte_features)
+            byte_bi_gram_features[bi_gram] = 1
     return byte_bi_gram_features
     
 def get_asm_file(pe):
@@ -405,22 +402,19 @@ def get_classification_asm_features(asm_file, selected_opcode_features_1, select
         # Moving the sliding window
         prev_opcode2 = prev_opcode1
         prev_opcode1 = opcode
+
     # Initialize the bi-gram OPCODE feature matrix
-    num_cols1 = len(selected_opcode_features_1)
-    num_cols2 = len(selected_opcode_features_2)
-    opcode_bi_gram_features_list = [0]*num_cols1
-    opcode_tri_gram_features_list = [0]*num_cols2            
+    opcode_bi_gram_features = dict.fromkeys(selected_opcode_features_1, 0)          
     # One-hot-encoding the sample with the combination of all encountered features
-    for col, bi_gram in enumerate(selected_opcode_features_1):
+    for bi_gram in selected_opcode_features_1:
         if bi_gram in list(unique_bi_grams):
-            opcode_bi_gram_features_list[col] = 1
-    for col, tri_gram in enumerate(selected_opcode_features_2):
+            opcode_bi_gram_features[bi_gram] = 1
+    # Initialize the tri-gram OPCODE feature matrix
+    opcode_tri_gram_features = dict.fromkeys(selected_opcode_features_2, 0)          
+    # One-hot-encoding the sample with the combination of all encountered features
+    for tri_gram in selected_opcode_features_2:
         if tri_gram in list(unique_tri_grams):
-            opcode_tri_gram_features_list[col] = 1
-    # Convert the bi-gram OPCODE features into a dataframe object
-    opcode_bi_gram_features = pd.DataFrame(opcode_bi_gram_features_list, columns=selected_opcode_features_1)
-    # Convert the tri-gram OPCODE features into a dataframe object
-    opcode_tri_gram_features = pd.DataFrame(opcode_tri_gram_features_list, columns=selected_opcode_features_2)
+            opcode_tri_gram_features[tri_gram] = 1
     return opcode_bi_gram_features, opcode_tri_gram_features
 
 def create_training_feature_vectors(sample_dir):
@@ -523,24 +517,63 @@ def create_validation_feature_vectors(sample_dir, selected_byte_features, select
     final_feature_df = final_feature_df.fillna(0)
     return final_feature_df
 
-def create_classification_feature_vector(sample, selected_byte_features, selected_opcode_features_1, selected_opcode_features_2):
-    # Process the sample as a PE file
-    pe = pefile.PE(sample)
+def create_classification_feature_vector(sample, selected_feature_path):
+    selected_byte_features, selected_opcode_features_1, selected_opcode_features_2=parse_selected_features(selected_feature_path)
     # Collecting PE header features from the sample
-    header_features = get_header_features(pe, header_features)
-    # Gathering byte file for the sample
-    byte_file = get_byte_file(pe)
-    # Gathering ASM file for the sample
-    asm_file = get_asm_file(pe)
+    header_features = {}
+    try:
+        pe = pefile.PE(sample)
+        # Collecting PE header features from the current sample
+        header_features = get_header_features(pe, header_features)
+        # Gathering byte file for the sample
+        byte_file = get_byte_file(pe)
+        # Gathering ASM file for the sample
+        asm_file = get_asm_file(pe)
+    except:
+        # Sample not a PE file so put empty features
+        byte_file = bytearray()
+        asm_file = []
     # Creating byte-based features
     byte_bi_gram_features = get_classification_byte_features(byte_file, selected_byte_features)
     # Creating opcode-based features
     opcode_bi_gram_features, opcode_tri_gram_features = get_classification_asm_features(asm_file, selected_opcode_features_1, selected_opcode_features_2)
     # Creating final feature vector
-    features = pd.concat([header_features, byte_bi_gram_features, opcode_bi_gram_features, opcode_tri_gram_features])
-    # Fill empty spaces in the dataframe with 0s
-    features = features.fillna(0)
-    return features
+    features = {**header_features, **byte_bi_gram_features}
+    features = {**features, **opcode_bi_gram_features}
+    features = {**features, **opcode_tri_gram_features}
+    features_df = pd.DataFrame(features.items(), columns=features.keys())
+    return features_df
+
+def parse_selected_features(file_path):
+    with open(file_path, 'r') as file:
+        lines = file.readlines()
+
+    bi_gram_byte_features = []
+    bi_gram_opcode_features = []
+    tri_gram_opcode_features = []
+
+    current_section = None
+
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+
+        if line == "BI-GRAM BYTE FEATURES":
+            current_section = "bi_gram_byte"
+        elif line == "BI-GRAM OPCODE FEATURES":
+            current_section = "bi_gram_opcode"
+        elif line == "TRI-GRAM OPCODE FEATURES":
+            current_section = "tri_gram_opcode"
+        else:
+            if current_section == "bi_gram_byte":
+                bi_gram_byte_features.append(line)
+            elif current_section == "bi_gram_opcode":
+                bi_gram_opcode_features.append(line)
+            elif current_section == "tri_gram_opcode":
+                tri_gram_opcode_features.append(line)
+    print(len(bi_gram_byte_features), len(bi_gram_opcode_features), len(tri_gram_opcode_features))
+    return bi_gram_byte_features, bi_gram_opcode_features, tri_gram_opcode_features
 
 def evaluate_model(model, x_test, y_test):
     y_pred = model.predict(x_test)

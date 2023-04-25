@@ -7,3 +7,4 @@ seaborn
 gevent
 Flask
 lief
+envparse

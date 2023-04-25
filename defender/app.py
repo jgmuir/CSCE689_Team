@@ -1,29 +1,44 @@
-import lief
+import io
+import pefile
 import pandas as pd
 import random
-from flask import Flask, jsonify, request
-from classifier import create_feature_vector
+import os
+from flask import Flask, jsonify, request, abort
+from .classifier import create_classification_feature_vector
 # from attribute_extractor import PEAttributeExtractor
 
 
-def create_app():
+def create_app(model, model_thresh):
     app = Flask(__name__)
-    # app.config['model'] = model
+    app.config['model'] = model
 
     # analyse a sample
     @app.route('/', methods=['POST'])
     def post():
         # curl -XPOST --data-binary @somePEfile http://127.0.0.1:8080/ -H "Content-Type: application/octet-stream"
-        if 'file' not in request.files:
-            return "No file uploaded", 400
+        print('test')
+        if request.headers['Content-Type'] != 'application/octet-stream':
+            resp = jsonify({'error': 'expecting application/octet-stream'})
+            resp.status_code = 400  # Bad Request
+            return resp
 
-        file = request.files['file']
-        file_stream = io.BytesIO(file.read())
-        features = create_feature_vector(file_stream)
+      
+        bytez = request.data
+        print(bytez)
+        with open('uploaded_binary.bin', 'wb') as f:
+            f.write(bytez)
 
-        # Convert the DataFrame to JSON and return the result
-        return jsonify(features.to_dict(orient='records')[0])
+        pe = pefile.PE('uploaded_binary.bin')
 
+        selected_feature_path = os.environ.get('SELECTED_FEATURES_PATH') or os.path.join(os.path.dirname(os.path.abspath(__file__)), '../selected_features.txt')
+        features = create_classification_feature_vector(pe, selected_feature_path)
+    
+        # load feature vector into a model and get the result
+        result = app.config['model'].predict(features)
+        print(result)
+        resp = jsonify({'result': result[0]})
+        resp.status_code = 200
+        return resp
     # get the model info
     @app.route('/model', methods=['GET'])
     def get_model():
