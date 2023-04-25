@@ -24,12 +24,18 @@ def create_app(model, model_thresh):
 
       
         bytez = request.data
-        
+        print(bytez)
+        with open('uploaded_binary.bin', 'wb') as f:
+            f.write(bytez)
+
+        pe = pefile.PE('uploaded_binary.bin')
+
         selected_feature_path = os.environ.get('SELECTED_FEATURES_PATH') or os.path.join(os.path.dirname(os.path.abspath(__file__)), '../selected_features.txt')
-        features = create_classification_feature_vector(bytez, selected_feature_path)
+        features = create_classification_feature_vector(pe, selected_feature_path)
     
         # load feature vector into a model and get the result
         result = app.config['model'].predict(features)
+        print(result)
         resp = jsonify({'result': result[0]})
         resp.status_code = 200
         return resp
