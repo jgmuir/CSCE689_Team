@@ -4,12 +4,13 @@ import math                                             # Logarithm function
 import pandas as pd                                     # Dataframe managment
 import pefile                                           # Header feature extraction
 import dis                                              # x86 disassembly
+import traceback
 import pickle                                           # Model saving
 from io import StringIO                                 # Reading disassembly result
 from sklearn.feature_selection import SelectFromModel   # Feature dimensionality reduction
 from sklearn.ensemble import RandomForestClassifier     # Random Forest Classifier
 from collections import Counter                         # Entropy calculations
-import numpy as np                                      # Matrix operations
+
 # EVALUATION IMPORTS
 from matplotlib import pyplot as plt                    # Output plotting
 import seaborn as sns                                   # Heatmap of confusion matrix
@@ -138,7 +139,7 @@ def get_training_byte_features(byte_files, classifications):
     # Initialize the bi-gram byte feature matrix
     num_rows = len(byte_files)
     num_cols = len(list(all_unique_bi_grams))
-    byte_bi_gram_features_list = [[0]*num_cols for i in range(num_rows)]          
+    byte_bi_gram_features_list = [[0]*num_cols for i in range(num_rows)]              
     # One-hot-encoding every sample with the combination of all encountered features
     for row, file_bi_grams in enumerate(each_file_bi_grams):
         print("One-hot-encoding bi-gram byte features for sample " + str(list(byte_files)[row]))
@@ -149,7 +150,7 @@ def get_training_byte_features(byte_files, classifications):
     selector = SelectFromModel(estimator=RandomForestClassifier(n_estimators=1000), max_features=200)
     # Selecting top 200 bi-gram byte features
     print("Selecting top 200 bi-gram byte features")
-    selector.fit(np.array(byte_bi_gram_features_list), list(classifications))
+    selector.fit(byte_bi_gram_features_list, list(classifications))
     selections = selector.get_support()
     # Copy the selected features to another matrix
     print("Copying selected bi-gram byte features")
@@ -210,15 +211,11 @@ def get_classification_byte_features(byte_file, selected_byte_features):
         # Moving the sliding window
         prev_byte = byte
     # Initialize the bi-gram byte feature matrix
-    num_cols = len(selected_byte_features)
-    byte_bi_gram_features_list = [0]*num_cols            
+    byte_bi_gram_features = dict.fromkeys(selected_byte_features, 0)          
     # One-hot-encoding the sample with the combination of all encountered features
-    for col, bi_gram in enumerate(selected_byte_features):
+    for bi_gram in selected_byte_features:
         if bi_gram in list(unique_bi_grams):
-            byte_bi_gram_features_list[col] = 1
-    # Convert the bi-gram byte features into a dataframe object
-    byte_bi_gram_features = pd.DataFrame([byte_bi_gram_features_list], columns=selected_byte_features)
-    print(byte_bi_gram_features.shape)
+            byte_bi_gram_features[bi_gram] = 1
     return byte_bi_gram_features
     
 def get_asm_file(pe):
@@ -304,7 +301,7 @@ def get_training_asm_features(asm_files, classifications):
     selector = SelectFromModel(estimator=RandomForestClassifier(n_estimators=1000), max_features=100)
     # Selecting top 100 bi-gram opcode features
     print("Selecting top 100 bi-gram OPCODE features")
-    selector.fit(np.array(opcode_bi_gram_features_list), list(classifications))
+    selector.fit(opcode_bi_gram_features_list, list(classifications))
     selections = selector.get_support()
     # Copying the selected bi-gram features to another matrix
     print("Copying selected bi-gram OPCODE features")
@@ -316,7 +313,7 @@ def get_training_asm_features(asm_files, classifications):
     opcode_bi_gram_features = pd.DataFrame(selected_opcode_bi_gram_features_dict)
     # Selecting top 100 tri-gram opcode features
     print("Selecting top 100 tri-gram OPCODE features")
-    selector.fit(np.array(opcode_tri_gram_features_list), list(classifications))
+    selector.fit(opcode_tri_gram_features_list, list(classifications))
     selections = selector.get_support()
     # Copy the selected features to another matrix
     print("Copying selected tri-gram OPCODE features")
@@ -406,22 +403,19 @@ def get_classification_asm_features(asm_file, selected_opcode_features_1, select
         # Moving the sliding window
         prev_opcode2 = prev_opcode1
         prev_opcode1 = opcode
+
     # Initialize the bi-gram OPCODE feature matrix
-    num_cols1 = len(selected_opcode_features_1)
-    num_cols2 = len(selected_opcode_features_2)
-    opcode_bi_gram_features_list = [0]*num_cols1
-    opcode_tri_gram_features_list = [0]*num_cols2            
+    opcode_bi_gram_features = dict.fromkeys(selected_opcode_features_1, 0)          
     # One-hot-encoding the sample with the combination of all encountered features
-    for col, bi_gram in enumerate(selected_opcode_features_1):
+    for bi_gram in selected_opcode_features_1:
         if bi_gram in list(unique_bi_grams):
-            opcode_bi_gram_features_list[col] = 1
-    for col, tri_gram in enumerate(selected_opcode_features_2):
+            opcode_bi_gram_features[bi_gram] = 1
+    # Initialize the tri-gram OPCODE feature matrix
+    opcode_tri_gram_features = dict.fromkeys(selected_opcode_features_2, 0)          
+    # One-hot-encoding the sample with the combination of all encountered features
+    for tri_gram in selected_opcode_features_2:
         if tri_gram in list(unique_tri_grams):
-            opcode_tri_gram_features_list[col] = 1
-    # Convert the bi-gram OPCODE features into a dataframe object
-    opcode_bi_gram_features = pd.DataFrame([opcode_bi_gram_features_list], columns=selected_opcode_features_1)
-    # Convert the tri-gram OPCODE features into a dataframe object
-    opcode_tri_gram_features = pd.DataFrame([opcode_tri_gram_features_list], columns=selected_opcode_features_2)
+            opcode_tri_gram_features[tri_gram] = 1
     return opcode_bi_gram_features, opcode_tri_gram_features
 
 def create_training_feature_vectors(sample_dir):
@@ -524,7 +518,50 @@ def create_validation_feature_vectors(sample_dir, selected_byte_features, select
     final_feature_df = final_feature_df.fillna(0)
     return final_feature_df
 
-   
+def create_classification_feature_vector(sample, selected_feature_path):
+    selected_byte_features, selected_opcode_features_1, selected_opcode_features_2=parse_selected_features(selected_feature_path)
+    # Collecting PE header features from the sample
+    header_features = {
+        "FILE_HEADER.MACHINE": 0,
+        "FILE_HEADER.SIZEOFOPTIONALHEADER": 0,
+        "FILE_HEADER.CHARACTERISTICS": 0,
+        "OPTIONAL_HEADER.IMAGEBASE": 0,
+        "OPTIONAL_HEADER.MAJOROPERATINGSYSTEM": 0,
+        "OPTIONAL_HEADER.MAJORSUBSYSTEMVERSION": 0,
+        "OPTIONAL_HEADER.DLLCHARACTERISTICS": 0,
+        "OPTIONAL_HEADER.SUBSYSTEM": 0,
+        "PE_SECTIONS.MAXENTROPY": 0,
+        "PE_SECTIONS.MINENTROPY": 0,
+        "PE_SECTIONS.MEANENTROPY": 0,
+        "RESOURCES.MAXENTROPY": 0,
+        "RESOURCES.MINENTROPY": 0,
+        "VS_VERSIONINFO.Length": 0
+    }
+    try:
+        pe = pefile.PE(sample)
+        # Collecting PE header features from the current sample
+        header_features = get_header_features(pe, header_features)
+        # Gathering byte file for the sample
+        byte_file = get_byte_file(pe)
+        # Gathering ASM file for the sample
+        asm_file = get_asm_file(pe)
+    except:
+        traceback.print_exc()
+        # Sample not a PE file so put empty features
+        byte_file = bytearray()
+        asm_file = []
+    # Creating byte-based features
+    byte_bi_gram_features = get_classification_byte_features(byte_file, selected_byte_features)
+    # Creating opcode-based features
+    opcode_bi_gram_features, opcode_tri_gram_features = get_classification_asm_features(asm_file, selected_opcode_features_1, selected_opcode_features_2)
+    # Creating final feature vector
+    print(len(header_features))
+    features = {**header_features, **byte_bi_gram_features}
+    features = {**features, **opcode_bi_gram_features}
+    features = {**features, **opcode_tri_gram_features}
+
+    return list(features.values())
+
 def parse_selected_features(file_path):
     with open(file_path, 'r') as file:
         lines = file.readlines()
@@ -555,113 +592,6 @@ def parse_selected_features(file_path):
                 tri_gram_opcode_features.append(line)
     print(len(bi_gram_byte_features), len(bi_gram_opcode_features), len(tri_gram_opcode_features))
     return bi_gram_byte_features, bi_gram_opcode_features, tri_gram_opcode_features
-
-
-
-def create_classification_feature_vector(pe, selected_feature_path):
-    selected_byte_features, selected_opcode_features_1, selected_opcode_features_2=parse_selected_features(selected_feature_path)
-    # Collecting PE header features from the sample
-    header_features= pd.DataFrame()
-    header_features = get_header_features(pe, header_features)
-    # Gathering byte file for the sample
-    byte_file = get_byte_file(pe)
-    # Gathering ASM file for the sample
-    asm_file = get_asm_file(pe)
-    # Creating byte-based features
-    byte_bi_gram_features = get_classification_byte_features(byte_file, selected_byte_features)
-    # Creating opcode-based features
-    opcode_bi_gram_features, opcode_tri_gram_features = get_classification_asm_features(asm_file, selected_opcode_features_1, selected_opcode_features_2)
-    # Creating final feature vector
-    features = pd.concat([header_features, byte_bi_gram_features, opcode_bi_gram_features, opcode_tri_gram_features],axis=1)
-    # Fill empty spaces in the dataframe with 0s
-    print(features.shape)
-    features = features.fillna(0)
-    return features
-
-def create_feature_vector(file_obj):
-    # Creating initial feature dataframe
-    feature_df = pd.DataFrame()
-
-    # Collecting PE Header features from the input file
-    features = {}
-    try:
-        pe = pefile.PE(data=file_obj.read())
-
-        file_header = getattr(pe, "FILE_HEADER", None)
-        features["FILE_HEADER.MACHINE"] = file_header.Machine if file_header else 0
-        features["FILE_HEADER.SIZEOFOPTIONALHEADER"] = file_header.SizeOfOptionalHeader if file_header else 0
-        features["FILE_HEADER.CHARACTERISTICS"] = file_header.Characteristics if file_header else 0
-
-        entropies = []
-        byte_files = []
-        if (hasattr(pe, "OPTIONAL_HEADER")):
-            features["OPTIONAL_HEADER.IMAGEBASE"] = pe.OPTIONAL_HEADER.ImageBase
-            features["OPTIONAL_HEADER.MAJOROPERATINGSYSTEM"] = pe.OPTIONAL_HEADER.MajorOperatingSystemVersion
-            features["OPTIONAL_HEADER.MAJORSUBSYSTEMVERSION"] = pe.OPTIONAL_HEADER.MajorSubsystemVersion
-            features["OPTIONAL_HEADER.DLLCHARACTERISTICS"] = pe.OPTIONAL_HEADER.DllCharacteristics
-            features["OPTIONAL_HEADER.SUBSYSTEM"] = pe.OPTIONAL_HEADER.Subsystem
-            for section in pe.sections:
-                entropies.append(section.get_entropy())
-            for directory in pe.OPTIONAL_HEADER.DATA_DIRECTORY:
-                features["DATA_DIRECTORY."+str(directory.name)] = 1 if ((directory.VirtualAddress != 0) and (directory.Size != 0)) else 0
-            byte_files.append(pe.get_data(pe.OPTIONAL_HEADER.BaseOfCode, pe.OPTIONAL_HEADER.SizeOfCode))
-            # TODO: Get ASM file here
-        else:
-            features["OPTIONAL_HEADER.IMAGEBASE"] = 0
-            features["OPTIONAL_HEADER.MAJOROPERATINGSYSTEM"] = 0
-            features["OPTIONAL_HEADER.MAJORSUBSYSTEMVERSION"] = 0
-            features["OPTIONAL_HEADER.DLLCHARACTERISTICS"] = 0
-            features["OPTIONAL_HEADER.SUBSYSTEM"] = 0
-            entropies.append(0)
-        if len(entropies) != 0:
-            features["PE_SECTIONS.MAXENTROPY"] = max(entropies)
-            features["PE_SECTIONS.MINENTROPY"] = min(entropies)
-            features["PE_SECTIONS.MEANENTROPY"] = sum(entropies) / len(entropies)
-        else:
-            features["PE_SECTIONS.MAXENTROPY"] = 0
-            features["PE_SECTIONS.MINENTROPY"] = 0
-            features["PE_SECTIONS.MEANENTROPY"] = 0
-       
-        entropies = []
-        if (hasattr(pe, "DIRECTORY_ENTRY_RESOURCE")):
-            for resource_type in pe.DIRECTORY_ENTRY_RESOURCE.entries:
-                if resource_type.name is not None:
-                    name = str(resource_type.name)
-                else:
-                    name = str(pefile.RESOURCE_TYPE.get(resource_type.struct.Id))
-
-                if name is None:
-                    name = str(resource_type.struct.Id)
-
-                if hasattr(resource_type, 'directory'):
-                    for resource_id in resource_type.directory.entries:
-                        if hasattr(resource_id, 'directory'):
-                            for resource_lang in resource_id.directory.entries:
-                                if hasattr(resource_lang, "data"):
-                                    data = pe.get_data(resource_lang.data.struct.OffsetToData, resource_lang.data.struct.Size)
-                                    entropies.append(entropy(data))
-                                else:
-                                    entropies.append(0)
-        else:
-            entropies.append(0)
-        if len(entropies) != 0:
-            features["RESOURCES.MAXENTROPY"] = max(entropies)
-            features["RESOURCES.MINENTROPY"] = min(entropies)
-        else:
-            features["RESOURCES.MAXENTROPY"] = 0
-            features["RESOURCES.MINENTROPY"] = 0
-        
-        if (hasattr(pe, "VS_VERSIONINFO")):
-            features["VS_VERSIONINFO.Length"] = pe.VS_VERSIONINFO[0].Length
-        else:
-            features["VS_VERSIONINFO.Length"] = 0
-        # Adding the features to the dataframe
-        feature_df = feature_df.append(features, ignore_index=True)
-
-    except pefile.PEFormatError:
-        print("Error: Not a valid PE file")
-
-    return feature_df
 
 def evaluate_model(model, x_test, y_test):
     y_pred = model.predict(x_test)
