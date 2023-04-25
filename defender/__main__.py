@@ -1,6 +1,7 @@
 import os
 import pickle
 import envparse
+import socket
 import pickle as cPickle
 from .app import create_app
 from gevent.pywsgi import WSGIServer
@@ -41,8 +42,10 @@ if __name__ == "__main__":
     app = create_app(model, model_thresh)
 
     import sys
+    hostname = socket.gethostname()
+
     port = int(sys.argv[1]) if len(sys.argv) == 2 else 8080
-    print(f'Starting server on {port}')
  
-    http_server = WSGIServer(('', port), app)
-    http_server.serve_forever()
+    ip_address = '127.0.0.1'
+    
+    app.run(host='0.0.0.0', port=port)

@@ -16,7 +16,7 @@ def create_app(model, model_thresh):
     @app.route('/', methods=['POST'])
     def post():
         # curl -XPOST --data-binary @somePEfile http://127.0.0.1:8080/ -H "Content-Type: application/octet-stream"
-        
+        print('test')
         if request.headers['Content-Type'] != 'application/octet-stream':
             resp = jsonify({'error': 'expecting application/octet-stream'})
             resp.status_code = 400  # Bad Request

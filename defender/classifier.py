@@ -9,7 +9,7 @@ from io import StringIO                                 # Reading disassembly re
 from sklearn.feature_selection import SelectFromModel   # Feature dimensionality reduction
 from sklearn.ensemble import RandomForestClassifier     # Random Forest Classifier
 from collections import Counter                         # Entropy calculations
-
+import numpy as np                                      # Matrix operations
 # EVALUATION IMPORTS
 from matplotlib import pyplot as plt                    # Output plotting
 import seaborn as sns                                   # Heatmap of confusion matrix
@@ -149,8 +149,7 @@ def get_training_byte_features(byte_files, classifications):
     selector = SelectFromModel(estimator=RandomForestClassifier(n_estimators=1000), max_features=200)
     # Selecting top 200 bi-gram byte features
     print("Selecting top 200 bi-gram byte features")
-    print(byte_bi_gram_features_list)
-    selector.fit(byte_bi_gram_features_list, list(classifications))
+    selector.fit(np.array(byte_bi_gram_features_list), list(classifications))
     selections = selector.get_support()
     # Copy the selected features to another matrix
     print("Copying selected bi-gram byte features")
@@ -219,6 +218,7 @@ def get_classification_byte_features(byte_file, selected_byte_features):
             byte_bi_gram_features_list[col] = 1
     # Convert the bi-gram byte features into a dataframe object
     byte_bi_gram_features = pd.DataFrame([byte_bi_gram_features_list], columns=selected_byte_features)
+    print(byte_bi_gram_features.shape)
     return byte_bi_gram_features
     
 def get_asm_file(pe):
@@ -304,7 +304,7 @@ def get_training_asm_features(asm_files, classifications):
     selector = SelectFromModel(estimator=RandomForestClassifier(n_estimators=1000), max_features=100)
     # Selecting top 100 bi-gram opcode features
     print("Selecting top 100 bi-gram OPCODE features")
-    selector.fit(opcode_bi_gram_features_list, list(classifications))
+    selector.fit(np.array(opcode_bi_gram_features_list), list(classifications))
     selections = selector.get_support()
     # Copying the selected bi-gram features to another matrix
     print("Copying selected bi-gram OPCODE features")
@@ -316,7 +316,7 @@ def get_training_asm_features(asm_files, classifications):
     opcode_bi_gram_features = pd.DataFrame(selected_opcode_bi_gram_features_dict)
     # Selecting top 100 tri-gram opcode features
     print("Selecting top 100 tri-gram OPCODE features")
-    selector.fit(opcode_tri_gram_features_list, list(classifications))
+    selector.fit(np.array(opcode_tri_gram_features_list), list(classifications))
     selections = selector.get_support()
     # Copy the selected features to another matrix
     print("Copying selected tri-gram OPCODE features")
@@ -572,7 +572,7 @@ def create_classification_feature_vector(pe, selected_feature_path):
     # Creating opcode-based features
     opcode_bi_gram_features, opcode_tri_gram_features = get_classification_asm_features(asm_file, selected_opcode_features_1, selected_opcode_features_2)
     # Creating final feature vector
-    features = pd.concat([header_features, byte_bi_gram_features, opcode_bi_gram_features, opcode_tri_gram_features],ignore_index=True)
+    features = pd.concat([header_features, byte_bi_gram_features, opcode_bi_gram_features, opcode_tri_gram_features],axis=1)
     # Fill empty spaces in the dataframe with 0s
     print(features.shape)
     features = features.fillna(0)
