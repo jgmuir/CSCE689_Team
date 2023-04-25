@@ -1,0 +1,10 @@
+#pip install git
+pandas
+scikit-learn
+matplotlib
+pefile
+seaborn
+gevent
+Flask
+lief
+envparse

@@ -1,11 +1,9 @@
 *.ipynb_checkpoints/
+*__pycache__/
 *.vs/
 *Release/
-samples/malicious/*
-samples/benign/*
-samples/adversarial-original/*
-samples/adversarial-encoded/*
-samples/adversarial-final/*
+samples/*
+res/full_sha256.csv
 attacker/Dropper/calculator/resource.h
 attacker/Dropper/calculator/calculator.rc
 attacker/Dropper/calculator/calculator.aps
