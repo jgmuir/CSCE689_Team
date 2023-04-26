@@ -421,7 +421,7 @@ def get_classification_asm_features(asm_file, selected_opcode_features_1, select
     return opcode_bi_gram_features, opcode_tri_gram_features
 
 def create_training_feature_vectors(sample_dir):
-    csv_file = pd.read_csv(".\\samples\\training\\samples.csv")
+    csv_file = pd.read_csv(".\\samples\\samples.csv")
     # Creating initial header feature dataframe
     header_feature_df = pd.DataFrame()
     # Creating structure to store all byte and ASM files
@@ -621,6 +621,8 @@ def main():
     x_test = test.loc[:, test.columns != "CLASSIFICATION"]
     x_test = x_test.drop(columns=["SAMPLE"])
     y_test = test["CLASSIFICATION"]
+    train.to_csv("training_vectors.csv", index=False)
+    test.to_csv("validation_vectors.csv", index=False)
     # EVALUATING THE RFC CLASSIFIER
     print("Evaluating the model")
     evaluate_model(model, x_test, y_test)
