@@ -48,8 +48,11 @@ def get_header_features(pe, features):
         features["OPTIONAL_HEADER.DLLCHARACTERISTICS"] = pe.OPTIONAL_HEADER.DllCharacteristics
         features["OPTIONAL_HEADER.SUBSYSTEM"] = pe.OPTIONAL_HEADER.Subsystem
         entropies = []
-        for section in pe.sections:
-            entropies.append(section.get_entropy())
+        if hasattr(pe.sections):
+            for section in pe.sections:
+                entropies.append(section.get_entropy())
+        else:
+            entropies.append(0)
         features["PE_SECTIONS.MAXENTROPY"] = max(entropies)
         features["PE_SECTIONS.MINENTROPY"] = min(entropies)
         features["PE_SECTIONS.MEANENTROPY"] = sum(entropies) / len(entropies)
