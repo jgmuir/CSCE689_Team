@@ -49,8 +49,11 @@ def get_header_features(pe, features):
         features["OPTIONAL_HEADER.DLLCHARACTERISTICS"] = pe.OPTIONAL_HEADER.DllCharacteristics
         features["OPTIONAL_HEADER.SUBSYSTEM"] = pe.OPTIONAL_HEADER.Subsystem
         entropies = []
-        for section in pe.sections:
-            entropies.append(section.get_entropy())
+        if hasattr(pe.sections):
+            for section in pe.sections:
+                entropies.append(section.get_entropy())
+        else:
+            entropies.append(0)
         features["PE_SECTIONS.MAXENTROPY"] = max(entropies)
         features["PE_SECTIONS.MINENTROPY"] = min(entropies)
         features["PE_SECTIONS.MEANENTROPY"] = sum(entropies) / len(entropies)
@@ -419,6 +422,7 @@ def get_classification_asm_features(asm_file, selected_opcode_features_1, select
     return opcode_bi_gram_features, opcode_tri_gram_features
 
 def create_training_feature_vectors(sample_dir):
+    csv_file = pd.read_csv(".\\samples\\samples.csv")
     # Creating initial header feature dataframe
     header_feature_df = pd.DataFrame()
     # Creating structure to store all byte and ASM files
@@ -432,10 +436,7 @@ def create_training_feature_vectors(sample_dir):
             # Creating initial entry for the current sample
             header_features = {}
             header_features["SAMPLE"] = (sample)
-            if ("malicious" in root):
-                header_features["CLASSIFICATION"] = 1 
-            else:
-                header_features["CLASSIFICATION"] = 0
+            header_features["CLASSIFICATION"] = csv_file.loc[csv_file["ID"] == file]["classification"] # Debug this line
             # Try to process the sample as a PE file
             try:
                 pe = pefile.PE(sample)
