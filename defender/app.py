@@ -2,8 +2,11 @@ import io
 import pefile
 import pandas as pd
 import random
+import time
+import numpy as np
 import os
 from flask import Flask, jsonify, request, abort
+import tempfile
 from .classifier import create_classification_feature_vector
 # from attribute_extractor import PEAttributeExtractor
 
@@ -23,7 +26,7 @@ def create_app(model, model_thresh):
     app = Flask(__name__)
     app.config['model'] = model
 
-    # analyse a sample
+    # Analyze a sample
     @app.route('/', methods=['POST'])
     def post():
         # curl -XPOST --data-binary @somePEfile http://127.0.0.1:8080/ -H "Content-Type: application/octet-stream"
@@ -33,14 +36,21 @@ def create_app(model, model_thresh):
             resp.status_code = 400  # Bad Request
             return resp
 
-      
         bytez = request.data
-        print(bytez)
-        with open('uploaded_binary.bin', 'wb') as f:
-            f.write(bytez)
 
-        pe = pefile.PE('uploaded_binary.bin')
+        # Save bytez to a temporary file
+        with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+            temp_file.write(bytez)
+            temp_file.flush()
+            temp_file.seek(0)
 
+            # Pass the temporary file path to the create_classification_feature_vector function
+            selected_feature_path = os.environ.get('SELECTED_FEATURES_PATH') or os.path.join(os.path.dirname(os.path.abspath(__file__)), '../selected_features.txt')
+            features_list = create_classification_feature_vector(temp_file.name, selected_feature_path)
+
+        features_array = np.array(features_list).reshape(1, -1)
+        # Load feature vector into a model and get the result
+        result = app.config['model'].predict(features_array)
         # Check if file is performing section hiding by modifying NumberOfSections
         if (hasattr(pe, "FILE_HEADER")):
             if (pe.FILE_HEADER.NumberOfSections == 0):
