@@ -31,77 +31,85 @@ def entropy(data):
     return entropy
 
 def get_header_features(pe, features):
-    # Get FILE_HEADER features
-    if (hasattr(pe, "FILE_HEADER")):
-        features["FILE_HEADER.MACHINE"] = pe.FILE_HEADER.Machine
-        features["FILE_HEADER.SIZEOFOPTIONALHEADER"] = pe.FILE_HEADER.SizeOfOptionalHeader
-        features["FILE_HEADER.CHARACTERISTICS"] = pe.FILE_HEADER.Characteristics
-    else:
-        features["FILE_HEADER.MACHINE"] = 0
-        features["FILE_HEADER.SIZEOFOPTIONALHEADER"] = 0
-        features["FILE_HEADER.CHARACTERISTICS"] = 0
-    # Get OPTIONAL_HEADER features
-    if (hasattr(pe, "OPTIONAL_HEADER")):
-        features["OPTIONAL_HEADER.IMAGEBASE"] = pe.OPTIONAL_HEADER.ImageBase
-        features["OPTIONAL_HEADER.MAJOROPERATINGSYSTEM"] = pe.OPTIONAL_HEADER.MajorOperatingSystemVersion
-        features["OPTIONAL_HEADER.MAJORSUBSYSTEMVERSION"] = pe.OPTIONAL_HEADER.MajorSubsystemVersion
-        features["OPTIONAL_HEADER.DLLCHARACTERISTICS"] = pe.OPTIONAL_HEADER.DllCharacteristics
-        features["OPTIONAL_HEADER.SUBSYSTEM"] = pe.OPTIONAL_HEADER.Subsystem
-        entropies = []
-        if hasattr(pe.sections):
-            for section in pe.sections:
-                entropies.append(section.get_entropy())
+    try:
+        # Get FILE_HEADER features
+        if (hasattr(pe, "FILE_HEADER")):
+            features["FILE_HEADER.MACHINE"] = pe.FILE_HEADER.Machine
+            features["FILE_HEADER.SIZEOFOPTIONALHEADER"] = pe.FILE_HEADER.SizeOfOptionalHeader
+            features["FILE_HEADER.CHARACTERISTICS"] = pe.FILE_HEADER.Characteristics
         else:
-            entropies.append(0)
-        features["PE_SECTIONS.MAXENTROPY"] = max(entropies)
-        features["PE_SECTIONS.MINENTROPY"] = min(entropies)
-        features["PE_SECTIONS.MEANENTROPY"] = sum(entropies) / len(entropies)
-    else:
-        features["OPTIONAL_HEADER.IMAGEBASE"] = 0
-        features["OPTIONAL_HEADER.MAJOROPERATINGSYSTEM"] = 0
-        features["OPTIONAL_HEADER.MAJORSUBSYSTEMVERSION"] = 0
-        features["OPTIONAL_HEADER.DLLCHARACTERISTICS"] = 0
-        features["OPTIONAL_HEADER.SUBSYSTEM"] = 0
-        features["PE_SECTIONS.MAXENTROPY"] = 0
-        features["PE_SECTIONS.MINENTROPY"] = 0
-        features["PE_SECTIONS.MEANENTROPY"] = 0
-    # Get DIRECTORY_ENTRY_RESOURCE features
-    if (hasattr(pe, "DIRECTORY_ENTRY_RESOURCE")):
-        # Find all resources in the PE and calculate their entropy
-        entropies = []
-        for resource_type in pe.DIRECTORY_ENTRY_RESOURCE.entries:
-            if resource_type.name is not None:
-                name = str(resource_type.name)
+            features["FILE_HEADER.MACHINE"] = 0
+            features["FILE_HEADER.SIZEOFOPTIONALHEADER"] = 0
+            features["FILE_HEADER.CHARACTERISTICS"] = 0
+        # Get OPTIONAL_HEADER features
+        if (hasattr(pe, "OPTIONAL_HEADER")):
+            features["OPTIONAL_HEADER.IMAGEBASE"] = pe.OPTIONAL_HEADER.ImageBase
+            features["OPTIONAL_HEADER.MAJOROPERATINGSYSTEM"] = pe.OPTIONAL_HEADER.MajorOperatingSystemVersion
+            features["OPTIONAL_HEADER.MAJORSUBSYSTEMVERSION"] = pe.OPTIONAL_HEADER.MajorSubsystemVersion
+            features["OPTIONAL_HEADER.DLLCHARACTERISTICS"] = pe.OPTIONAL_HEADER.DllCharacteristics
+            features["OPTIONAL_HEADER.SUBSYSTEM"] = pe.OPTIONAL_HEADER.Subsystem
+            entropies = []
+            if hasattr(pe, "sections"):
+                for section in pe.sections:
+                    entropies.append(section.get_entropy())
             else:
-                name = str(pefile.RESOURCE_TYPE.get(resource_type.struct.Id))
-            if name is None:
-                name = str(resource_type.struct.Id)
-            if hasattr(resource_type, 'directory'):
-                for resource_id in resource_type.directory.entries:
-                    if hasattr(resource_id, 'directory'):
-                        for resource_lang in resource_id.directory.entries:
-                            if hasattr(resource_lang, "data"):
-                                try:
-                                    data = pe.get_data(resource_lang.data.struct.OffsetToData, resource_lang.data.struct.Size)
-                                    entropies.append(entropy(data))
-                                except:
-                                    entropies.append(0)
-        if len(entropies) > 0:
-            features["RESOURCES.MAXENTROPY"] = max(entropies)
-            features["RESOURCES.MINENTROPY"] = min(entropies)
+                entropies.append(0)
+            if len(entropies) > 0:
+                features["PE_SECTIONS.MAXENTROPY"] = max(entropies)
+                features["PE_SECTIONS.MINENTROPY"] = min(entropies)
+                features["PE_SECTIONS.MEANENTROPY"] = sum(entropies) / len(entropies)
+            else:
+                features["PE_SECTIONS.MAXENTROPY"] = 0
+                features["PE_SECTIONS.MINENTROPY"] = 0
+                features["PE_SECTIONS.MEANENTROPY"] = 0
+        else:
+            features["OPTIONAL_HEADER.IMAGEBASE"] = 0
+            features["OPTIONAL_HEADER.MAJOROPERATINGSYSTEM"] = 0
+            features["OPTIONAL_HEADER.MAJORSUBSYSTEMVERSION"] = 0
+            features["OPTIONAL_HEADER.DLLCHARACTERISTICS"] = 0
+            features["OPTIONAL_HEADER.SUBSYSTEM"] = 0
+            features["PE_SECTIONS.MAXENTROPY"] = 0
+            features["PE_SECTIONS.MINENTROPY"] = 0
+            features["PE_SECTIONS.MEANENTROPY"] = 0
+        # Get DIRECTORY_ENTRY_RESOURCE features
+        if (hasattr(pe, "DIRECTORY_ENTRY_RESOURCE")):
+            # Find all resources in the PE and calculate their entropy
+            entropies = []
+            for resource_type in pe.DIRECTORY_ENTRY_RESOURCE.entries:
+                if resource_type.name is not None:
+                    name = str(resource_type.name)
+                else:
+                    name = str(pefile.RESOURCE_TYPE.get(resource_type.struct.Id))
+                if name is None:
+                    name = str(resource_type.struct.Id)
+                if hasattr(resource_type, 'directory'):
+                    for resource_id in resource_type.directory.entries:
+                        if hasattr(resource_id, 'directory'):
+                            for resource_lang in resource_id.directory.entries:
+                                if hasattr(resource_lang, "data"):
+                                    try:
+                                        data = pe.get_data(resource_lang.data.struct.OffsetToData, resource_lang.data.struct.Size)
+                                        entropies.append(entropy(data))
+                                    except:
+                                        entropies.append(0)
+            if len(entropies) > 0:
+                features["RESOURCES.MAXENTROPY"] = max(entropies)
+                features["RESOURCES.MINENTROPY"] = min(entropies)
+            else:
+                features["RESOURCES.MAXENTROPY"] = 0
+                features["RESOURCES.MINENTROPY"] = 0
         else:
             features["RESOURCES.MAXENTROPY"] = 0
-            features["RESOURCES.MINENTROPY"] = 0
-    else:
-        features["RESOURCES.MAXENTROPY"] = 0
-        features["RESOURCES.MINENTROPY"] = 0   
-    # Get VS_VERSIONINFO feature
-    if (hasattr(pe, "VS_VERSIONINFO")):
-        features["VS_VERSIONINFO.Length"] = pe.VS_VERSIONINFO[0].Length
-    else:
-        features["VS_VERSIONINFO.Length"] = 0
-    # Return the final header features
-    return features
+            features["RESOURCES.MINENTROPY"] = 0   
+        # Get VS_VERSIONINFO feature
+        if (hasattr(pe, "VS_VERSIONINFO")):
+            features["VS_VERSIONINFO.Length"] = pe.VS_VERSIONINFO[0].Length
+        else:
+            features["VS_VERSIONINFO.Length"] = 0
+        # Return the final header features
+        return features
+    except:
+        return None
 
 def get_byte_file(pe):
     try:
@@ -149,7 +157,7 @@ def get_training_byte_features(byte_files, classifications):
             if bi_gram in file_bi_grams:
                 byte_bi_gram_features_list[row][col] = 1
     # Creating the feature selector model for top 200 features
-    selector = SelectFromModel(estimator=RandomForestClassifier(n_estimators=1000), max_features=200)
+    selector = SelectFromModel(estimator=RandomForestClassifier(n_estimators=1000, max_depth=5), max_features=200)
     # Selecting top 200 bi-gram byte features
     print("Selecting top 200 bi-gram byte features")
     selector.fit(byte_bi_gram_features_list, list(classifications))
@@ -300,7 +308,7 @@ def get_training_asm_features(asm_files, classifications):
             if tri_gram in file_tri_grams:
                 opcode_tri_gram_features_list[row][col] = 1
     # Creating the feature selector model for top 100 features
-    selector = SelectFromModel(estimator=RandomForestClassifier(n_estimators=1000), max_features=100)
+    selector = SelectFromModel(estimator=RandomForestClassifier(n_estimators=1000, max_depth=5), max_features=100)
     # Selecting top 100 bi-gram opcode features
     print("Selecting top 100 bi-gram OPCODE features")
     selector.fit(opcode_bi_gram_features_list, list(classifications))
@@ -435,7 +443,11 @@ def create_training_feature_vectors(sample_dir):
             # Creating initial entry for the current sample
             header_features = {}
             header_features["SAMPLE"] = (sample)
-            header_features["CLASSIFICATION"] = csv_file.loc[csv_file["ID"] == file]["classification"] # Debug this line
+            classification_listing = csv_file.loc[csv_file["id"] == int(file)]["list"]
+            if classification_listing.values[0] == "Blacklist":
+                header_features["CLASSIFICATION"] = 1
+            else:
+                header_features["CLASSIFICATION"] = 0
             # Try to process the sample as a PE file
             try:
                 pe = pefile.PE(sample)
@@ -449,6 +461,8 @@ def create_training_feature_vectors(sample_dir):
             # Collecting PE header features from the current sample
             print("Collecting header features for sample " + str(sample))
             header_features = get_header_features(pe, header_features)
+            if header_features == None:
+                continue
             header_feature_df = header_feature_df.append(header_features, ignore_index=True)
             # Gathering byte file for the current sample
             print("Gathering byte file for sample " + str(sample))
@@ -614,7 +628,7 @@ def main():
     y_train = train["CLASSIFICATION"]
     # CREATING AND TRAINING THE RFC CLASSIFIER
     print("Training the model")
-    model = RandomForestClassifier(n_estimators=1000).fit(x_train, y_train)
+    model = RandomForestClassifier(n_estimators=1000, max_depth=5).fit(x_train, y_train)
     # CREATING THE TESTING DATASET
     print("Creating feature matrix for validation data")
     test = create_validation_feature_vectors(test_dir, selected_byte_features, selected_opcode_features_1, selected_opcode_features_2)
