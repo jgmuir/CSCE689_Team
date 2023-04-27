@@ -4,6 +4,7 @@ import math                                             # Logarithm function
 import pandas as pd                                     # Dataframe managment
 import pefile                                           # Header feature extraction
 import dis                                              # x86 disassembly
+import traceback
 import pickle                                           # Model saving
 from io import StringIO                                 # Reading disassembly result
 from sklearn.feature_selection import SelectFromModel   # Feature dimensionality reduction
@@ -535,7 +536,22 @@ def create_validation_feature_vectors(sample_dir, selected_byte_features, select
 def create_classification_feature_vector(sample, selected_feature_path):
     selected_byte_features, selected_opcode_features_1, selected_opcode_features_2=parse_selected_features(selected_feature_path)
     # Collecting PE header features from the sample
-    header_features = {}
+    header_features = {
+        "FILE_HEADER.MACHINE": 0,
+        "FILE_HEADER.SIZEOFOPTIONALHEADER": 0,
+        "FILE_HEADER.CHARACTERISTICS": 0,
+        "OPTIONAL_HEADER.IMAGEBASE": 0,
+        "OPTIONAL_HEADER.MAJOROPERATINGSYSTEM": 0,
+        "OPTIONAL_HEADER.MAJORSUBSYSTEMVERSION": 0,
+        "OPTIONAL_HEADER.DLLCHARACTERISTICS": 0,
+        "OPTIONAL_HEADER.SUBSYSTEM": 0,
+        "PE_SECTIONS.MAXENTROPY": 0,
+        "PE_SECTIONS.MINENTROPY": 0,
+        "PE_SECTIONS.MEANENTROPY": 0,
+        "RESOURCES.MAXENTROPY": 0,
+        "RESOURCES.MINENTROPY": 0,
+        "VS_VERSIONINFO.Length": 0
+    }
     try:
         pe = pefile.PE(sample)
         # Collecting PE header features from the current sample
@@ -545,6 +561,7 @@ def create_classification_feature_vector(sample, selected_feature_path):
         # Gathering ASM file for the sample
         asm_file = get_asm_file(pe)
     except:
+        traceback.print_exc()
         # Sample not a PE file so put empty features
         byte_file = bytearray()
         asm_file = []
@@ -553,11 +570,12 @@ def create_classification_feature_vector(sample, selected_feature_path):
     # Creating opcode-based features
     opcode_bi_gram_features, opcode_tri_gram_features = get_classification_asm_features(asm_file, selected_opcode_features_1, selected_opcode_features_2)
     # Creating final feature vector
+    print(len(header_features))
     features = {**header_features, **byte_bi_gram_features}
     features = {**features, **opcode_bi_gram_features}
     features = {**features, **opcode_tri_gram_features}
-    features_df = pd.DataFrame(features.items(), columns=features.keys())
-    return features_df
+
+    return list(features.values())
 
 def parse_selected_features(file_path):
     with open(file_path, 'r') as file:
