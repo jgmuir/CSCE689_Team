@@ -1,5 +1,5 @@
 import io
-import pefile
+import pefile as pe
 import pandas as pd
 import random
 import time
