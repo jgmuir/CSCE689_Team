@@ -1,7 +1,8 @@
 import io
-import pefile as pe
+import pefile 
 import pandas as pd
 import random
+import winsign.verify
 import time
 import numpy as np
 import os
@@ -37,16 +38,27 @@ def create_app(model, model_thresh):
             return resp
 
         bytez = request.data
-
+        pe = pefile.PE(data=bytez)
         # Save bytez to a temporary file
         with tempfile.NamedTemporaryFile(delete=False) as temp_file:
             temp_file.write(bytez)
             temp_file.flush()
             temp_file.seek(0)
 
+            # Verify the file using the winsign.verify module
+
+            with open(temp_file, 'rb') as f:
+                is_selfSigned = winsign.verify.verify_pefile(f)
+                if(is_selfSigned == False):
+                    resp = jsonify({'result': 1})
+                    resp.status_code = 200
+                    return resp
+                
             # Pass the temporary file path to the create_classification_feature_vector function
             selected_feature_path = os.environ.get('SELECTED_FEATURES_PATH') or os.path.join(os.path.dirname(os.path.abspath(__file__)), '../selected_features.txt')
             features_list = create_classification_feature_vector(temp_file.name, selected_feature_path)
+
+           
 
         features_array = np.array(features_list).reshape(1, -1)
         # Load feature vector into a model and get the result
@@ -59,15 +71,6 @@ def create_app(model, model_thresh):
                     resp = jsonify({'result': result[0]})
                     resp.status_code = 200
                     return resp
-                
-        # Check if file is using a self signed certificate
-        if has_certificate(pe):
-            certificate = get_certificate(pe)
-            if is_self_signed(certificate):
-                result = 1
-                resp = jsonify({'result': result[0]})
-                resp.status_code = 200
-                return resp
 
         # Get the feature vector for the current file
         selected_feature_path = os.environ.get('SELECTED_FEATURES_PATH') or os.path.join(os.path.dirname(os.path.abspath(__file__)), '../selected_features.txt')
