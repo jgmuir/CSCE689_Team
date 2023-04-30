@@ -24,13 +24,12 @@ def main():
 
             # Encode using base64
             bdata = base64.b64encode(data)
-            print(bdata)
 
             # XOR the encoded data
             xdata = XOR(bytearray(bdata))
 
             # store in a new file
-            file_name = file.split(".")[0] + ".enc"
+            file_name = file.split(".")[0]
             open(os.path.join(output_path,file_name),"wb").write(xdata)
     return
 
