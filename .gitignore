@@ -8,3 +8,4 @@ attacker/Dropper/calculator/resource.h
 attacker/Dropper/calculator/calculator.rc
 attacker/Dropper/calculator/calculator.aps
 defender/pe-machine-learning-dataset/*
+defender/samples/*
